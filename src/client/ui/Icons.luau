@@ -1,12 +1,9 @@
 --!strict
--- Icon-Registry. Pro Slot zwei Werte:
---   assetId  → Roblox-Asset-ID, IDEAL aus dem Creator Store geladen
---             (Free Pick: z.B. "Material Icons", "Roblox UI Icons", "Phosphor Icons")
---             Suchwege im Studio:  Toolbox → Creator Store → "icons free" filter
---   fallback → Unicode-Symbol, das auch ohne Asset rendert
+-- Icon-Registry. Pro Slot:
+--   assetId  → rbxassetid://<NUMMER>   (siehe assets/icons/nav/README.txt zum Hochladen)
+--   fallback → Unicode-Symbol (rendert immer, auch ohne Asset)
 --
--- Standard ist die fallback-Variante. Sobald du Assets aus dem Creator Store importierst,
--- ersetze die "rbxassetid://0" Platzhalter durch die echte ID.
+-- So lange assetId == "rbxassetid://0" ist, wird der Emoji-Fallback genutzt.
 
 export type Icon = { assetId: string, fallback: string }
 
@@ -15,14 +12,20 @@ local function icon(assetId: string, fallback: string): Icon
 end
 
 local Icons = {
-	shop      = icon("rbxassetid://0", "🛒"),
-	inventory = icon("rbxassetid://0", "🎒"),
-	index     = icon("rbxassetid://0", "📖"),
-	quests    = icon("rbxassetid://0", "✅"),
-	daily     = icon("rbxassetid://0", "📅"),
-	rewards   = icon("rbxassetid://0", "🎁"),
-	settings  = icon("rbxassetid://0", "⚙"),
-	gold      = icon("rbxassetid://0", "🪙"),
+	-- NavBar
+	shop      = icon("rbxassetid://94339880607617", "🛒"),
+	inventory = icon("rbxassetid://124654824560080", "🎒"),
+	index     = icon("rbxassetid://132029669474372", "📖"),
+	quests    = icon("rbxassetid://79779449589358", "✅"),
+	daily     = icon("rbxassetid://71504174645040", "📅"),
+	rewards   = icon("rbxassetid://72809142990849", "🎁"),
+	trade     = icon("rbxassetid://98361262424095", "🔄"),
+	fusion    = icon("rbxassetid://0", "⚡"),
+	rebirth   = icon("rbxassetid://85540634188859", "♻"),
+	settings  = icon("rbxassetid://93700586176429", "⚙"),
+
+	-- Währungen / Sonstiges
+	gold      = icon("rbxassetid://0", "💵"),
 	faith     = icon("rbxassetid://0", "✨"),
 	offerings = icon("rbxassetid://0", "🕯"),
 	gems      = icon("rbxassetid://0", "💎"),

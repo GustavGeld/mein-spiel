@@ -47,7 +47,7 @@ function InventoryPanel.create(body: Instance, snapshot)
 	gridHolder.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	gridHolder.ScrollBarThickness = 4
 	gridHolder.Parent = body
-	Util.gridLayout(gridHolder, UDim2.fromOffset(160, 200), UDim2.fromOffset(8, 8))
+	Util.gridLayout(gridHolder, UDim2.fromOffset(160, 220), UDim2.fromOffset(8, 8))
 
 	local inventory = snapshot.inventory or { gods = {} }
 	local temple = snapshot.temple or { slots = {} }
@@ -60,7 +60,7 @@ function InventoryPanel.create(body: Instance, snapshot)
 
 	local function render()
 		gridHolder:ClearAllChildren()
-		Util.gridLayout(gridHolder, UDim2.fromOffset(160, 200), UDim2.fromOffset(8, 8))
+		Util.gridLayout(gridHolder, UDim2.fromOffset(160, 220), UDim2.fromOffset(8, 8))
 
 		local filtered = {}
 		for _, entry in ipairs(inventory.gods) do

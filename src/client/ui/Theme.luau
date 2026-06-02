@@ -12,6 +12,7 @@ Theme.color = {
 	accent = Color3.fromRGB(120, 180, 255),
 	accentDark = Color3.fromRGB(60, 110, 200),
 	gold = Color3.fromRGB(255, 215, 80),
+	money = Color3.fromRGB(64, 224, 110),
 	faith = Color3.fromRGB(200, 230, 255),
 	gems = Color3.fromRGB(120, 230, 200),
 	offerings = Color3.fromRGB(255, 180, 120),
@@ -23,6 +24,18 @@ Theme.color = {
 	unlocked = Color3.fromRGB(60, 120, 80),
 	danger = Color3.fromRGB(220, 90, 90),
 	success = Color3.fromRGB(90, 200, 120),
+}
+
+-- Pro NavBar-Button eine eigene markante Akzentfarbe.
+Theme.navColors = {
+	shop      = Color3.fromRGB(245, 175, 60),   -- warm orange
+	inventory = Color3.fromRGB(160, 110, 70),   -- braun/tan
+	index     = Color3.fromRGB(150, 110, 230),  -- lila
+	quests    = Color3.fromRGB(90,  200, 120),  -- grün
+	daily     = Color3.fromRGB(70,  180, 220),  -- cyan
+	rewards   = Color3.fromRGB(230, 90,  170),  -- pink
+	trade     = Color3.fromRGB(60,  160, 240),  -- blau
+	settings  = Color3.fromRGB(160, 170, 190),  -- grau
 }
 
 Theme.font = {

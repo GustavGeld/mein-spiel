@@ -1,0 +1,28 @@
+So bekommst du die Icons ins Spiel (einmaliger Schritt, ~30 Sekunden):
+
+1. Studio oeffnen → View → Asset Manager (oder Top-Menü „Asset Manager")
+2. Linke Seite: „Images" auswaehlen
+3. Oben links: „Bulk Import" klicken
+4. Im Datei-Dialog ALLE 8 PNGs aus diesem Ordner markieren und „Open" klicken
+5. Roblox lädt sie hoch. In der Liste siehst du dann pro Datei eine Asset-ID
+   (Rechtsklick → „Copy ID to Clipboard")
+
+6. In src/client/ui/Icons.luau die Platzhalter ersetzen.
+   Beispiel — aus
+       shop = icon("rbxassetid://0", "🛒"),
+   wird
+       shop = icon("rbxassetid://123456789", "🛒"),
+
+   Mapping Datei → Icons.luau-Key:
+     nav_shop.png       → shop
+     nav_inventory.png  → inventory
+     nav_index.png      → index
+     nav_quests.png     → quests
+     nav_daily.png      → daily
+     nav_rewards.png    → rewards
+     nav_trade.png      → trade
+     nav_settings.png   → settings
+
+7. Speichern. Rojo synct automatisch — die Buttons wechseln sofort von Emoji
+   auf die echten Bilder. Solange ein Slot auf "rbxassetid://0" steht,
+   nutzt die UI den Emoji-Fallback (kein Crash).

@@ -34,10 +34,11 @@ export type Profile = {
 		tree: { [string]: { [string]: number } },
 	},
 	quests:     {
-		daily: { [string]: number },
-		weekly: { [string]: number },
+		daily: { [string]: any },
+		weekly: { [string]: any },
+		dayStamp: number,
 		minute: { lastClaim: number },
-		login: { streak: number, lastDay: number },
+		login: { streak: number, lastDay: number, claimed: boolean },
 	},
 	settings:   {
 		language: string,
@@ -82,8 +83,9 @@ local function default(): Profile
 		},
 		quests     = {
 			daily = {}, weekly = {},
+			dayStamp = 0,
 			minute = { lastClaim = 0 },
-			login = { streak = 0, lastDay = 0 },
+			login = { streak = 0, lastDay = 0, claimed = false },
 		},
 		settings   = {
 			language = "en",

@@ -13,8 +13,13 @@ Locale.setLanguage("en")
 
 local UIController = require(script.controllers.UIController)
 local RollController = require(script.controllers.RollController)
+local AutoRollController = require(script.controllers.AutoRollController)
+local BroadcastController = require(script.controllers.BroadcastController)
 
 UIController.start()
 RollController.start()
+BroadcastController.start()
+-- AutoRollController hat keine start()-Methode; bloßes require initialisiert das Modul.
+local _ = AutoRollController
 
 Logger.info("Client ready.")

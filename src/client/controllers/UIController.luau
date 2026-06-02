@@ -16,6 +16,10 @@ local ShopPanel = require(script.Parent.Parent.ui.panels.ShopPanel)
 local InventoryPanel = require(script.Parent.Parent.ui.panels.InventoryPanel)
 local IndexPanel = require(script.Parent.Parent.ui.panels.IndexPanel)
 local SettingsPanel = require(script.Parent.Parent.ui.panels.SettingsPanel)
+local RebirthPanel = require(script.Parent.Parent.ui.panels.RebirthPanel)
+local QuestsPanel = require(script.Parent.Parent.ui.panels.QuestsPanel)
+local DailyPanel = require(script.Parent.Parent.ui.panels.DailyPanel)
+local FusionPanel = require(script.Parent.Parent.ui.panels.FusionPanel)
 local StubPanel = require(script.Parent.Parent.ui.panels.StubPanel)
 
 local LocalPlayer = Players.LocalPlayer
@@ -29,7 +33,9 @@ local snapshot: any = {
 	temple = { slots = {} },
 	unlocks = { packs = {} },
 	lifetime = { gold = 0, rebirths = 0 },
+	divinity = { spent = 0, tree = {} },
 	collection = { discovered = {} },
+	quests = { daily = {}, weekly = {}, minute = { lastClaim = 0 }, login = { streak = 0, lastDay = 0, claimed = false } },
 	settings = {},
 }
 
@@ -53,6 +59,9 @@ local PANEL_TITLES = {
 	quests    = "nav.quests",
 	daily     = "nav.daily",
 	rewards   = "nav.rewards",
+	trade     = "nav.trade",
+	fusion    = "nav.fusion",
+	rebirth   = "nav.rebirth",
 	settings  = "nav.settings",
 }
 
@@ -77,11 +86,17 @@ local function openPanel(id: string)
 	elseif id == "settings" then
 		SettingsPanel.create(handle.body, snapshot)
 	elseif id == "quests" then
-		StubPanel.create(handle.body, "Quests", "Daily & Weekly quests arrive in Stage 4.")
+		QuestsPanel.create(handle.body, snapshot)
 	elseif id == "daily" then
-		StubPanel.create(handle.body, "Daily", "Login streak, minute rewards & daily lucky roll arrive in Stage 4.")
+		DailyPanel.create(handle.body, snapshot)
 	elseif id == "rewards" then
 		StubPanel.create(handle.body, "Rewards", "Group join, codes & referral rewards arrive with Stage 10.")
+	elseif id == "trade" then
+		StubPanel.create(handle.body, "Trade", "Player-to-player trading arrives in Stage 8.")
+	elseif id == "rebirth" then
+		RebirthPanel.create(handle.body, snapshot)
+	elseif id == "fusion" then
+		FusionPanel.create(handle.body, snapshot)
 	end
 end
 
@@ -117,6 +132,21 @@ function UIController.start()
 		snapshot.temple = temple or { slots = {} }
 		rebuildIfPanelOpen()
 	end)
+	Net:Event("OnRebirthUpdate").OnClientEvent:Connect(function(data)
+		if not data then return end
+		snapshot.lifetime = data.lifetime or snapshot.lifetime
+		snapshot.divinity = data.divinity or snapshot.divinity
+		rebuildIfPanelOpen()
+	end)
+	Net:Event("OnQuestUpdate").OnClientEvent:Connect(function(quests)
+		if not quests then return end
+		snapshot.quests = quests
+		rebuildIfPanelOpen()
+	end)
+	-- Live-Rebuild bei Sprachwechsel
+	Locale.LanguageChanged:Connect(function()
+		rebuildIfPanelOpen()
+	end)
 
 	-- Initial Snapshot
 	task.spawn(function()
@@ -130,6 +160,8 @@ function UIController.start()
 			snapshot.settings = profile.settings or {}
 			-- Lifetime ist nicht im RequestProfile-Snapshot drin — Default 0.
 			snapshot.lifetime = profile.lifetime or { gold = 0, rebirths = 0 }
+			snapshot.divinity = profile.divinity or { spent = 0, tree = {} }
+			snapshot.quests = profile.quests or snapshot.quests
 			currencyBarApi.update(snapshot.currencies)
 			-- Sprache aus Settings setzen
 			if snapshot.settings.language then

@@ -62,7 +62,7 @@ function IndexPanel.create(body: Instance, snapshot)
 	gridHolder.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	gridHolder.ScrollBarThickness = 4
 	gridHolder.Parent = body
-	Util.gridLayout(gridHolder, UDim2.fromOffset(160, 200), UDim2.fromOffset(8, 8))
+	Util.gridLayout(gridHolder, UDim2.fromOffset(160, 220), UDim2.fromOffset(8, 8))
 
 	local discovered = (snapshot.collection or {}).discovered or {}
 	local entries = {}
@@ -79,7 +79,7 @@ function IndexPanel.create(body: Instance, snapshot)
 
 	local function render()
 		gridHolder:ClearAllChildren()
-		Util.gridLayout(gridHolder, UDim2.fromOffset(160, 200), UDim2.fromOffset(8, 8))
+		Util.gridLayout(gridHolder, UDim2.fromOffset(160, 220), UDim2.fromOffset(8, 8))
 
 		local filtered = {}
 		local foundCount = 0

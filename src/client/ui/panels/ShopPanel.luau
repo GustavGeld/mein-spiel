@@ -12,6 +12,7 @@ local Odds = require(Shared.math.Odds)
 
 local Theme = require(script.Parent.Parent.Theme)
 local Util = require(script.Parent.Parent.Util)
+local AutoRollController = require(script.Parent.Parent.Parent.controllers.AutoRollController)
 
 local ShopPanel = {}
 
@@ -99,7 +100,7 @@ local function makePackCard(pack, profileSnapshot): Frame
 	rightHolder.BackgroundTransparency = 1
 	rightHolder.AnchorPoint = Vector2.new(1, 0)
 	rightHolder.Position = UDim2.new(1, -16, 0, 8)
-	rightHolder.Size = UDim2.fromOffset(220, 80)
+	rightHolder.Size = UDim2.fromOffset(260, 80)
 	rightHolder.Parent = card
 
 	if not unlocked then
@@ -147,7 +148,7 @@ local function makePackCard(pack, profileSnapshot): Frame
 
 		for _, count in ipairs({ 1, 5, 10 }) do
 			local b = Util.button("x" .. count, Theme.color.accent)
-			b.Size = UDim2.new(0, 60, 1, 0)
+			b.Size = UDim2.new(0, 48, 1, 0)
 			b.Parent = buttons
 			b.Activated:Connect(function()
 				b.Text = "..."
@@ -160,6 +161,27 @@ local function makePackCard(pack, profileSnapshot): Frame
 				end
 			end)
 		end
+
+		-- Auto-Roll-Toggle pro Pack
+		local autoBtn = Util.button("Auto", Theme.color.success)
+		autoBtn.Size = UDim2.new(0, 64, 1, 0)
+		autoBtn.Parent = buttons
+
+		local function refreshAuto(active: number?)
+			if active == pack.id then
+				autoBtn.Text = "Stop"
+				autoBtn.BackgroundColor3 = Theme.color.danger
+			else
+				autoBtn.Text = "Auto"
+				autoBtn.BackgroundColor3 = Theme.color.success
+			end
+		end
+		refreshAuto(AutoRollController.activePackId())
+		AutoRollController.onChange(refreshAuto)
+
+		autoBtn.Activated:Connect(function()
+			AutoRollController.toggle(pack.id)
+		end)
 	end
 
 	return card

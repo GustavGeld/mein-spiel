@@ -1,0 +1,717 @@
+nutze für folgendes mcp roblox studio falls du gui brauchts und rojo also den folder mein-spiel um lua skripte und weiteres schneller überprüfen zu können und eine bessere übersichjt zu haben. dieser ordner ist über rojo auch mit roblox studio verbunden.  Du bist ein Senior Roblox Game Director, Economy Designer, Systems Designer, UI/UX Designer und Lead Scripter. Entwickle ein vollständiges, viral optimiertes Roblox-Game rund um Gods, RNG, Factory-Building, Rebirths, Trading, Fusion und Packs. Das Spiel muss extrem leicht verständlich, sehr zufriedenstellend zu spielen und stark auf Retention, Social Proof, Progression und virale Momente ausgelegt sein.
+
+
+
+WICHTIG:
+
+- Das gesamte Spiel soll in Englisch programmiert und benannt werden.
+
+- Die Spielsprache selbst muss aber später in den Einstellungen auf Deutsch umschaltbar sein.
+
+- Das Design muss für Roblox umsetzbar sein.
+
+- Alles soll auf langfristige Spielbindung, klare Progression und starke Clip-/Thumbnail-Tauglichkeit ausgelegt sein.
+
+- Denke wie ein Top-Roblox-Studio, nicht wie ein Hobbyprojekt.
+
+- Wenn Informationen fehlen, triff sinnvolle, moderne Designentscheidungen und begründe sie knapp.
+
+- Liefere am Ende ein vollständiges, strukturiertes Game Design Document und eine umsetzbare Implementierungsplanung.
+
+
+
+SPIELVISION
+
+Der Spieler startet mit einfachen Rolls, zieht Götter aus Packs, stellt sie in seinem Tempel auf und nutzt sie als Produktionsobjekte. Diese Götter erzeugen Ressourcen, die für mehr Packs, Temple Upgrades, Rebirths, Potions, Trading, Fusions und Prestige-Systeme verwendet werden. Das Spiel muss wie eine Mischung aus RNG-Collector, Factory Tycoon und Rebirth-Progression wirken.
+
+
+
+KERN-LOOP
+
+1. Gold verdienen.
+
+2. Packs kaufen.
+
+3. Packs öffnen.
+
+4. Götter ziehen.
+
+5. Götter im Tempel aufstellen.
+
+6. Ressourcen durch Götter produzieren.
+
+7. Tempel upgraden.
+
+8. Bessere Packs freischalten.
+
+9. Fusionen durchführen.
+
+10. Rebirth machen.
+
+11. Permanente Divinity-Upgrades kaufen.
+
+12. Noch weiter vorankommen.
+
+13. Trading, Auctions, Quests, Daily Rewards, Seasons nutzen.
+
+
+
+PACKS UND SELTENHEITEN
+
+Es gibt 10 Pack-Stufen. Jedes Pack enthält genau 5 Seltenheiten. Die Pack-Stufen werden durch Geld und Rebirths freigeschaltet. Ein zusätzliches Pack wird nur über Robux freigeschaltet.
+
+
+
+Pack 1:
+
+- Common
+
+- Uncommon
+
+- Rare
+
+- Epic
+
+- Unique
+
+
+
+Pack 2:
+
+- Elite
+
+- Heroic
+
+- Rising Star
+
+- Legendary
+
+- Mythic
+
+
+
+Pack 3:
+
+- Immortal
+
+- Demi-God
+
+- Valkyrie
+
+- God
+
+- Goddess
+
+
+
+Pack 4:
+
+- Ascended
+
+- Ancient
+
+- High-Tier
+
+- Cosmic
+
+- Celestial
+
+
+
+Pack 5:
+
+- Astral
+
+- Nebula
+
+- Galaxy
+
+- Universe
+
+- Archon
+
+
+
+Pack 6:
+
+- Chrono
+
+- Temporal
+
+- Dimensional
+
+- Spatial
+
+- Divine
+
+
+
+Pack 7:
+
+- Luminary
+
+- Seraphim
+
+- Sacred
+
+- Exalted
+
+- Radiant
+
+
+
+Pack 8:
+
+- Timeless
+
+- Infinite
+
+- Boundless
+
+- Absolute
+
+- Eternal
+
+
+
+Pack 9:
+
+- Abyssal
+
+- Void
+
+- Eldritch
+
+- Chaos
+
+- Primordial
+
+
+
+Pack 10:
+
+- Singularity
+
+- Transcendental
+
+- Omnipotent
+
+- Zenith
+
+- Beyond
+
+
+
+WICHTIGE PACK-REGELN
+
+- Die schlechteste Seltenheit eines Packs muss deutlich häufiger sein als die beste.
+
+- Beim Rollen muss unter jedem angezeigten Gott die Wahrscheinlichkeit sichtbar sein, z. B. “1 in 20”.
+
+- Die Wahrscheinlichkeit soll immer direkt unter dem aktuell angezeigten Gott sichtbar sein.
+
+- Seltenheiten müssen farbcodiert sein.
+
+- Je seltener der Gott, desto dramatischer die Roll-Animation.
+
+- Extrem seltene Züge müssen mit Broadcast, VFX, Sound und Screen-Effects gefeiert werden.
+
+- Secret Gods existieren mit minimaler Wahrscheinlichkeit und können in jedem Pack auftauchen.
+
+- Secret Gods sollen auch beim Rollen sichtbar durchlaufen, wenn die Roll-Animation verschiedene Götter vorbeiscrollt.
+
+- Das finale Ergebnis erscheint nach mehreren schnell wechselnden Vorschau-Göttern.
+
+
+
+PACK-UNLOCKING
+
+- Packs werden im Shop gekauft.
+
+- Jedes Pack kann 1x, 5x, 10x oder Max gekauft werden.
+
+- Der Shop muss pro Pack eine klare Preislogik haben.
+
+- Bessere Packs werden durch erreichte Geldsummen freigeschaltet.
+
+- Noch bessere Packs werden zusätzlich durch Rebirth-Anzahl freigeschaltet.
+
+- Ein Pack ist exklusiv über Robux freischaltbar.
+
+- Nach dem Kauf landen die Packs im Inventar.
+
+- Dort können sie später geöffnet werden.
+
+- Das Inventar muss übersichtlich und mobile-tauglich sein.
+
+
+
+ROLL-FEATURES
+
+- Auto Roll: öffnet Packs automatisch hintereinander.
+
+- Auto Roll wird über eine Roblox-Community-/Group-Mitgliedschaft freigeschaltet.
+
+- Zusätzlich gibt es zeitlich begrenzte Auto-Roll-Potions, die über Gems gekauft werden können.
+
+- Skip/Open Fast Feature: öffnet mehrere Packs in einer verkürzten Animation und zeigt nur die Ergebnisse nacheinander.
+
+- Skip/Open Fast ist ein Robux-Gamepass.
+
+- Es gibt Multi-Open Gamepasses, z. B. mehr als 10 gleichzeitig.
+
+
+
+TEMPEL / FACTORY-SYSTEM
+
+- Gezogene Götter können im Tempel aufgestellt werden.
+
+- Der Tempel ist die Factory des Spielers.
+
+- Jeder Gott produziert Ressourcen, die für Progression genutzt werden.
+
+- Unter jedem aufgestellten Gott wird dessen Produktionschance bzw. Seltenheit angezeigt.
+
+- Die Anzeige passt sich farblich an die Seltenheit an.
+
+- Der Tempel hat Stations/Slots, auf die Götter platziert werden.
+
+- Das Slot-Limit ist durch Tempel-Upgrades verbesserbar.
+
+- Der Tempel ist sichtbar ausbaubar und sollte optisch mit dem Fortschritt wachsen.
+
+- Die Götter starten zunächst als normale Roblox-Charakter-Puppen.
+
+- Später können spezielle God-Skins freigeschaltet werden.
+
+
+
+RESSOURCEN
+
+Es gibt mindestens diese Kernwährungen:
+
+- Gold: zum Kaufen von Packs.
+
+- Faith / Glauben: zum Upgraden des Tempels und der Produktionsleistung.
+
+- Offerings / Opfergaben: langsamer zu bekommen, liefern zufällige Upgrades und langfristige Boosts.
+
+- Gems: Premium-/Quest-Währung für temporäre Potions und Utility.
+
+
+
+RESOURCE DESIGN
+
+- Gold ist die Basiswährung und kommt schnell herein.
+
+- Faith wird für Temple Upgrades genutzt.
+
+- Offerings brauchen am längsten, sind aber stark und sollten zufällige, percentage-basierte Buffs geben, z. B. +3% Luck, +5% Gold, +4% Production, +2% Rebirth Gain.
+
+- Gems werden über Quests, Daily/Weekly Rewards und besondere Aktivitäten verdient.
+
+- Gems können Potions kaufen, die 10 Minuten lang Stats boosten oder die Produktion bestimmter Götter erhöhen.
+
+
+
+FUSION-SYSTEM
+
+- Wenn man 5x denselben Gott besitzt, kann man sie an einem Fusionsstand fusionieren.
+
+- Fusion erhöht einen separaten Fusion Rank.
+
+- Fusion Rank ist NICHT mit Seltenheitsgrad zu verwechseln.
+
+- Fusion beginnt schon ab 2 gleichen Göttern mit sehr niedriger Chance.
+
+- Ab 5 gleichen Göttern ist Fusion garantiert.
+
+- Die Erfolgswahrscheinlichkeit muss beim Versuch klar angezeigt werden.
+
+- Scheitert eine Fusion unter 5 Göttern, verschwinden die eingesetzten Götter.
+
+- Das Risiko soll bewusst sein und ein starkes Spannungselement erzeugen.
+
+- Fusion soll visuell eindrucksvoll sein.
+
+
+
+REBIRTH-SYSTEM
+
+- Beim Rebirth verliert der Spieler alles außer den permanenten Divinity-Upgrades und einem zweiten Faktor, der nicht zurückgesetzt wird.
+
+- Der Spieler erhält Divinity.
+
+- Divinity kann für permanente Upgrades verwendet werden, die Rebirths überleben.
+
+- Diese Upgrades können Luck, Gold Gain, Faith Gain, Production, Inventory, Roll Speed, Luck Display, Auto-Roll Efficiency und ähnliche Werte verbessern.
+
+- Es gibt eine Rebirth-Bar, die zeigt, wann ein Rebirth sinnvoll ist.
+
+- Wenn ein bestimmtes Limit erreicht oder überschritten wird, erhält der Spieler zusätzlich ein Temple Upgrade, das die Götter stärker produzieren lässt.
+
+- Danach steigt das Limit für den nächsten Bonus.
+
+- Der Rebirth-Faktor, der zusätzlich freigeschaltet wird, wird nicht zurückgesetzt.
+
+- Es gibt kein maximales Rebirth-Limit.
+
+- Rebirth soll langfristig skalieren.
+
+
+
+MONETARISIERUNG
+
+- Auto Roll ist permanent gegen viele Robux kaufbar.
+
+- Skip/Open Fast ist ebenfalls über Robux kaufbar.
+
+- Es gibt zusätzliche Gamepasses:
+
+  - 2x Gold
+
+  - 2x Faith
+
+  - 2x Offerings
+
+  - 2x Luck
+
+  - Extra Temple Slots
+
+  - Auto Collect
+
+  - VIP Area
+
+  - Multi Open Rolls
+
+  - weitere sinnvolle Varianten
+
+- Es gibt Developer Products für Währungen, Bundles und Boosts.
+
+- Es gibt auch zufällige oder temporäre Potion-Angebote.
+
+- Monetarisierung darf nicht pay-to-win zerstörerisch wirken, sondern soll Komfort, Geschwindigkeit und Sammelkomfort verkaufen.
+
+
+
+QUESTS UND RETENTION
+
+- Es gibt Daily Quests.
+
+- Es gibt Weekly Quests.
+
+- Es gibt minütliche kleine Rewards / Minute Rewards.
+
+- Quests können Packs, Gems, Potions oder andere Belohnungen geben.
+
+- Es gibt tägliche Login-Belohnungen.
+
+- Es gibt klare Progressionstreppen für Langzeitbindung.
+
+- Es darf kein Season-System mit Top-100-Belohnungen geben.
+
+- Top 100 sollen am Season-Ende bessere Belohnungen erhalten als niedrigere Ränge.
+
+
+
+LEADERBOARDS UND SEASONS
+
+- Es gibt Leaderboards für:
+
+  - Gold
+
+  - Divinity
+
+  - Rebirths
+
+  - Seltenster gezogener Gott
+
+  - Fusion Rank
+
+  - Gesamtproduktion
+
+- Am Ende jeder Season erhalten die Top 100 Belohnungen.
+
+- Die Belohnungen skalieren stark nach Rang.
+
+- Die beste Gruppe muss deutlich bessere Rewards bekommen als die unteren Plätze.
+
+- Die Season-Struktur soll Spieler wiederkehrend binden.
+
+
+
+TRADING UND AUKTION
+
+- Trading ist vorhanden.
+
+- Es gibt einen Trading-Button, der alle Spieler in der Lobby anzeigt.
+
+- Der Spieler kann eine Person anklicken und eine Trade-Anfrage senden.
+
+- Trade-Invites können in den Einstellungen an oder aus gestellt werden.
+
+- Wenn ein Invite akzeptiert wird, kann jeder Spieler seine gewünschten Items anbieten.
+
+- Die Vorschau des anderen Spielers wird erst sichtbar, wenn beide 5 Sekunden lang Accept gedrückt halten, ohne abzubrechen.
+
+- Erst danach wird der Trade final durchgeführt.
+
+- Zusätzlich gibt es Auktionssysteme.
+
+- Spieler können Götter oder spezielle Items in Auktionen einstellen.
+
+- Auktionssysteme müssen sicher, klar und schnell verständlich sein.
+
+
+
+VISUELLE UND VIRAL DESIGN-ANFORDERUNGEN
+
+- Das Spiel muss extrem thumbnail-freundlich sein.
+
+- Seltene Züge müssen episch, laut und unübersehbar wirken.
+
+- Es braucht Broadcasts.
+
+- Sehr starke Broadcasts sollen serverweit sein.
+
+- Einige extrem seltene Züge sollen global hervorgehoben werden.
+
+- Die Roll-Animation soll dramatischer werden, je seltener der Gott ist.
+
+- Der Bildschirm darf bei extrem seltenen Pulls dunkler, heller oder maximal inszeniert werden.
+
+- Der Name des gezogenen Gottes soll groß sichtbar sein.
+
+- Wahrscheinlichkeiten werden immer angezeigt.
+
+- Die UI muss modern, klar und Roblox-typisch sein.
+
+- Das Spiel soll sofort verständlich sein, auch für neue Spieler.
+
+
+
+UI / UX
+
+Erstelle ein komplettes UI-Konzept für:
+
+- Shop
+
+- Inventory
+
+- Roll Screen
+
+- Temple / Factory
+
+- Fusion Stand
+
+- Rebirth Screen
+
+- Quests
+
+- Settings
+
+- Trading
+
+- Auctions
+
+- Leaderboards
+
+- Season Rewards
+
+- Potions
+
+- Language Switcher
+
+
+
+Die UI soll:
+
+- mobilfreundlich sein
+
+- PC-freundlich sein
+
+- große Buttons für wichtige Aktionen haben
+
+- klare Farbcodes für Seltenheiten verwenden
+
+- keine unnötige Komplexität haben
+
+- gut für Kinder und jüngere Spieler verständlich sein
+
+
+
+LOCALE / SPRACHE
+
+- Das Spiel wird intern auf Englisch entwickelt.
+
+- In den Settings muss eine Sprachumschaltung auf Deutsch möglich sein.
+
+- Der Text sollte sauber internationalisierbar sein.
+
+- Alle Systeme sollen mit einem Locale-Framework vorbereitet werden.
+
+
+
+TECHNISCHE ANFORDERUNGEN
+
+- Entwirf die Roblox-Architektur sauber.
+
+- Trenne Client, Server und Shared Code.
+
+- Nutze sichere Server-Validation.
+
+- Alle wirtschaftlichen Werte müssen serverseitig kontrolliert sein.
+
+- Alle Trades, Rewards, Rolls und Rebirths müssen gegen Exploits abgesichert sein.
+
+- Nutze DataStores sinnvoll für:
+
+  - Inventory
+
+  - Currency
+
+  - Rebirths
+
+  - Divinity
+
+  - Temple Progress
+
+  - Quests
+
+  - Settings
+
+  - Trading History
+
+  - Season Progress
+
+- Schlage ein klares Modul-System vor.
+
+- Schlage eine saubere Ordnerstruktur vor.
+
+- Schlage Remotes, Events und Services vor.
+
+- Schlage Datenmodelle für Player Data vor.
+
+
+
+BÖSARTIGE ODER SCHLECHTE DESIGN-ENTSCHEIDUNGEN VERMEIDEN
+
+- Kein chaotisches UI.
+
+- Keine unverständlichen Währungen.
+
+- Keine unnötig komplizierten Systeme ohne Nutzen.
+
+- Kein Pay-to-win, das normale Spieler komplett frustriert.
+
+- Kein uneindeutiges Balancing.
+
+- Keine inflationären Zahlen ohne Sinn.
+
+- Keine Systeme, die nicht zu Roblox passen.
+
+
+
+ZUSÄTZLICHE DESIGN-EMPFEHLUNGEN
+
+Füge sinnvolle Elemente hinzu, die das Spiel stärker machen, zum Beispiel:
+
+- Pity-System, aber niemals für die beste Seltenheit.
+
+- Streak-Systeme für Glück oder Belohnungen.
+
+- Collection Book / Dex für alle Götter.
+
+- Server Events bei extrem seltenen Pulls.
+
+- Daily Lucky Roll.
+
+- Limited-Time Events.
+
+- Seasonal Gods.
+
+- Prestige Cosmetics.
+
+- Achievement System.
+
+- Gift System.
+
+- Friends Boosts.
+
+- Referral / Invite Rewards.
+
+- Tutorial mit sehr kurzem Onboarding.
+
+- AFK- oder Idle-Features nur, wenn sie die Active Loop nicht zerstören.
+
+
+
+WICHTIG ZUR BALANCE
+
+- Die schlechteste Seltenheit eines Packs soll deutlich häufiger sein als die beste.
+
+- Jede Pack-Stufe soll deutlich stärker sein als die vorherige.
+
+- Secret Gods sollen extrem selten sein.
+
+- Odds müssen klar, fair und verständlich sein.
+
+- Das Progressionstempo soll in den ersten 10 Minuten schnell sein, danach tiefer und langfristiger werden.
+
+- Die Progression muss auch nach Rebirths motivierend bleiben.
+
+
+
+WAS DU LIEFERN SOLLST
+
+1. Ein vollständiges Game Concept.
+
+2. Eine klare Core-Loop-Beschreibung.
+
+3. Ein detailliertes Economy- und Pack-System.
+
+4. Ein Rebirth- und Divinity-System.
+
+5. Ein Fusion-System.
+
+6. Ein Trading- und Auction-System.
+
+7. Ein Quest-, Daily- und Weekly-System.
+
+8. Ein Monetarisierungs- und Gamepass-Konzept.
+
+9. Ein UI/UX-Konzept.
+
+10. Eine technische Roblox-Architektur.
+
+11. Eine Content-Roadmap für Updates.
+
+12. Eine Priorisierung:
+
+   - Must-have für MVP
+
+   - Should-have für Launch
+
+   - Nice-to-have für Update 1
+
+   - Long-term expansion
+
+13. Eine Empfehlung, welche Features zuerst gebaut werden sollen.
+
+14. Wenn sinnvoll: konkrete Chancen, Formeln, Skalierungen und Balancing-Vorschläge.
+
+
+
+WICHTIG:
+
+- Denke immer in Richtung Viralität, Wiedererkennung, Progression und Langzeitbindung.
+
+- Sei konkret, nicht vage.
+
+- Erfinde nicht unnötig komplizierte Dinge, sondern nutze Systeme, die wirklich auf Roblox funktionieren.
+
+- Schlage Namen für das Spiel, für Packs, für Währungen und für Systeme vor.
+
+- Halte das Design konsistent und markant.
+
+- Ziel ist ein Roblox-Spiel, das sofort verständlich ist, langfristig motivierend bleibt und starke Social-Momente erzeugt.

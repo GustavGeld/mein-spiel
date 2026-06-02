@@ -1,80 +1,58 @@
 --!strict
--- Bottom-left CurrencyBar — Gold, Faith, Offerings, Gems, Divinity.
--- Wird live durch OnEconomyUpdate aktualisiert.
-
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Shared = ReplicatedStorage:WaitForChild("Shared")
-
-local Locale = require(Shared.locale.Locale)
-local Odds = require(Shared.math.Odds)
+-- Bottom-left Geld-Anzeige — groß, grün, ohne Hintergrund, mit dunklem Stroke
+-- für Lesbarkeit auf hellen Untergründen.
 
 local Theme = require(script.Parent.Theme)
-local Icons = require(script.Parent.Icons)
-local Util = require(script.Parent.Util)
 
 local CurrencyBar = {}
 
-local ORDER = { "gold", "faith", "offerings", "gems", "divinity" }
-local COLORS: { [string]: Color3 } = {
-	gold = Theme.color.gold,
-	faith = Theme.color.faith,
-	offerings = Theme.color.offerings,
-	gems = Theme.color.gems,
-	divinity = Theme.color.divinity,
-}
+local MONEY_KEY = "gold"
+
+local function formatMoney(n: number): string
+	n = math.floor(n + 0.5)
+	if n >= 1000000 then
+		local suffixes = { "M", "B", "T", "Q" }
+		local value = n / 1000000
+		local i = 1
+		while value >= 1000 and i < #suffixes do
+			value /= 1000
+			i += 1
+		end
+		return string.format("$%.1f%s", value, suffixes[i])
+	end
+	local s = tostring(n)
+	local out, count = "", 0
+	for i = #s, 1, -1 do
+		out = s:sub(i, i) .. out
+		count += 1
+		if count % 3 == 0 and i > 1 then
+			out = "," .. out
+		end
+	end
+	return "$" .. out
+end
 
 function CurrencyBar.create(parent: Instance): { update: ({ [string]: number }) -> () }
-	local frame = Instance.new("Frame")
-	frame.Name = "CurrencyBar"
-	frame.AnchorPoint = Vector2.new(0, 1)
-	frame.Position = UDim2.new(0, 16, 1, -16)
-	frame.Size = UDim2.fromOffset(220, 200)
-	frame.BackgroundColor3 = Theme.color.panel
-	frame.BackgroundTransparency = 0.1
-	frame.BorderSizePixel = 0
-	frame.Parent = parent
-	Util.corner(frame, Theme.radius.lg)
-	Util.stroke(frame)
-	Util.padding(frame, Theme.padding.md)
-	local layout = Util.listLayout(frame, Enum.FillDirection.Vertical, 6)
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-
-	local rows: { [string]: TextLabel } = {}
-	for _, currency in ipairs(ORDER) do
-		local row = Instance.new("Frame")
-		row.BackgroundTransparency = 1
-		row.Size = UDim2.new(1, 0, 0, 28)
-		row.Parent = frame
-
-		local iconBox = Util.icon(Icons[currency] or Icons.gold, 22)
-		iconBox.Position = UDim2.new(0, 0, 0.5, 0)
-		iconBox.AnchorPoint = Vector2.new(0, 0.5)
-		iconBox.Parent = row
-
-		local txt = Instance.new("TextLabel")
-		txt.BackgroundTransparency = 1
-		txt.AnchorPoint = Vector2.new(0, 0.5)
-		txt.Position = UDim2.new(0, 30, 0.5, 0)
-		txt.Size = UDim2.new(1, -30, 1, 0)
-		txt.Font = Theme.font.bold
-		txt.TextColor3 = COLORS[currency] or Theme.color.textPrimary
-		txt.TextScaled = false
-		txt.TextSize = 18
-		txt.TextXAlignment = Enum.TextXAlignment.Left
-		txt.Text = "0"
-		txt.Parent = row
-
-		rows[currency] = txt
-	end
+	local txt = Instance.new("TextLabel")
+	txt.Name = "CurrencyBar"
+	txt.AnchorPoint = Vector2.new(0, 1)
+	txt.Position = UDim2.new(0, 20, 1, -16)
+	txt.AutomaticSize = Enum.AutomaticSize.XY
+	txt.Size = UDim2.fromOffset(0, 0)
+	txt.BackgroundTransparency = 1
+	txt.Font = Theme.font.heading
+	txt.TextColor3 = Theme.color.money
+	txt.TextSize = 48
+	txt.TextXAlignment = Enum.TextXAlignment.Left
+	txt.TextYAlignment = Enum.TextYAlignment.Bottom
+	txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+	txt.TextStrokeTransparency = 0.2
+	txt.Text = "$0"
+	txt.Parent = parent
 
 	local function update(currencies: { [string]: number })
 		if not currencies then return end
-		for _, currency in ipairs(ORDER) do
-			local value = currencies[currency] or 0
-			if rows[currency] then
-				rows[currency].Text = Odds.formatBig(value)
-			end
-		end
+		txt.Text = formatMoney(currencies[MONEY_KEY] or 0)
 	end
 
 	return { update = update }

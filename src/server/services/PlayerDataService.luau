@@ -30,16 +30,21 @@ local AUTO_SAVE_INTERVAL = 60
 local SESSION_TIMEOUT = 30 -- Sekunden, nach denen ein verwaister Lock übernommen werden darf
 local MAX_RETRIES = 5
 
-local store = DataStoreService:GetDataStore(STORE_NAME)
 local jobId = game.JobId ~= "" and game.JobId or HttpService:GenerateGUID(false)
 
--- Studio ohne aktivierten API-Zugriff: ein einziger probe-Call entscheidet,
--- ob wir wirklich gegen den DataStore sprechen oder einen In-Memory-Mock nutzen.
--- Verhindert 5x-Retry-Spam bei jedem Join.
+-- Studio ohne aktivierten API-Zugriff (oder unveröffentlichter Place): bereits
+-- GetDataStore() kann werfen. Daher alles in pcall — schlägt es fehl, nutzen wir
+-- einen In-Memory-Mock, statt den ganzen Server-Bootstrap crashen zu lassen.
+local store: DataStore? = nil
 local DATASTORE_AVAILABLE = (function(): boolean
-	if not RunService:IsStudio() then return true end
+	if not RunService:IsStudio() then
+		store = DataStoreService:GetDataStore(STORE_NAME)
+		return true
+	end
 	local ok = pcall(function()
-		store:GetAsync("__probe__")
+		local s = DataStoreService:GetDataStore(STORE_NAME)
+		store = s
+		s:GetAsync("__probe__")
 	end)
 	if not ok then
 		Logger.warn("DataStore not available in Studio — using in-memory profiles.")
@@ -85,7 +90,7 @@ local function load(userId: number): Profile?
 		return profile
 	end
 	local ok, payload = retry(function()
-		return store:UpdateAsync(key(userId), function(old)
+		return (store :: DataStore):UpdateAsync(key(userId), function(old)
 			local data = old or {}
 			local now = os.time()
 			local session = data.session
@@ -112,7 +117,7 @@ local function save(userId: number, profile: Profile, releaseLock: boolean)
 		return
 	end
 	retry(function()
-		store:UpdateAsync(key(userId), function(old)
+		(store :: DataStore):UpdateAsync(key(userId), function(old)
 			local data = old or {}
 			-- nur unsere Session darf schreiben
 			if data.session and data.session.jobId ~= jobId then
@@ -130,11 +135,21 @@ end
 local economyEvent = Net:Event("OnEconomyUpdate")
 local inventoryEvent = Net:Event("OnInventoryUpdate")
 local templeEvent = Net:Event("OnTempleUpdate")
+local rebirthEvent = Net:Event("OnRebirthUpdate")
+local questEvent = Net:Event("OnQuestUpdate")
+
+local function rebirthSnapshot(profile: Profile)
+	return {
+		lifetime = profile.lifetime,
+		divinity = profile.divinity,
+	}
+end
 
 local function replicateAll(player: Player, profile: Profile)
 	economyEvent:FireClient(player, profile.currencies)
 	inventoryEvent:FireClient(player, { gods = profile.inventory.gods })
 	templeEvent:FireClient(player, profile.temple)
+	rebirthEvent:FireClient(player, rebirthSnapshot(profile))
 end
 
 function PlayerDataService.patchEconomy(player: Player)
@@ -155,6 +170,20 @@ function PlayerDataService.patchTemple(player: Player)
 	local profile = profiles[player]
 	if not profile then return end
 	templeEvent:FireClient(player, profile.temple)
+	dirty[player] = true
+end
+
+function PlayerDataService.patchRebirth(player: Player)
+	local profile = profiles[player]
+	if not profile then return end
+	rebirthEvent:FireClient(player, rebirthSnapshot(profile))
+	dirty[player] = true
+end
+
+function PlayerDataService.patchQuests(player: Player)
+	local profile = profiles[player]
+	if not profile then return end
+	questEvent:FireClient(player, profile.quests)
 	dirty[player] = true
 end
 

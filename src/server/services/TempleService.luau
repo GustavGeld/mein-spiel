@@ -111,6 +111,9 @@ local function placeGod(player: Player, slotIndex: number, godUid: string)
 		p.temple.slots[slotIndex].godUid = godUid
 	end)
 	PlayerDataService.patchTemple(player)
+	-- Quest-Progress (lazy)
+	local QS = script.Parent:FindFirstChild("QuestService")
+	if QS then (require(QS) :: any).onGodPlaced(player) end
 	return { ok = true }
 end
 

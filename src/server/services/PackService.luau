@@ -19,6 +19,18 @@ local EconomyService = require(script.Parent.EconomyService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local RateLimit = require(script.Parent.Parent.security.RateLimit)
 
+-- Lazy-Require: QuestService kann sein, dass es noch nicht geladen ist beim
+-- ersten require. Wir fragen jedes Mal frisch ab.
+local function tryGetQuestService()
+	local sib = script.Parent:FindFirstChild("QuestService")
+	return sib and require(sib) or nil
+end
+
+local function tryGetBroadcast()
+	local sib = script.Parent:FindFirstChild("BroadcastService")
+	return sib and require(sib) or nil
+end
+
 local PackService = {}
 
 -- Pro Spieler eigener kryptographisch initialisierter RNG.
@@ -70,6 +82,32 @@ end
 
 -- Wendet Pull-Ergebnis ans Profil an: Inventory-Eintrag + Collection-Book + Lifetime-Stat.
 local function applyPull(player: Player, packId: number, rarityId: string, isSecret: boolean): string
+	-- Quest-Progress (lazy gelöst, kein Hard-Dependency)
+	local QuestService = tryGetQuestService()
+	if QuestService then
+		QuestService.onPull(player, rarityId, isSecret)
+	end
+
+	-- Broadcast bei Secret oder bestem Pack-Tier
+	do
+		local Bc = tryGetBroadcast()
+		if Bc then
+			local pack = Packs.byId[packId]
+			local bestRarityInPack = pack and pack.rarities[#pack.rarities]
+			local rdef = Rarities.byId[rarityId]
+			if isSecret then
+				Bc.fire({
+					type = "secret", player = player.Name, godId = rarityId,
+					rarityId = rarityId, rarityColor = rdef and rdef.color or Color3.fromRGB(255, 255, 255),
+				})
+			elseif rarityId == bestRarityInPack then
+				Bc.fire({
+					type = "rare_pull", player = player.Name, godId = rarityId,
+					rarityId = rarityId, rarityColor = rdef and rdef.color or Color3.fromRGB(255, 255, 255),
+				})
+			end
+		end
+	end
 	local godPool = Gods.byRarity[rarityId]
 	local godDef = godPool and godPool[getRng(player):NextInteger(1, #godPool)] or nil
 	local uid = HttpService:GenerateGUID(false)
@@ -138,6 +176,10 @@ local function buyAndOpen(player: Player, packId: number, count: number)
 	local totalCost = unitPrice * count
 	if not EconomyService.transact(player, "gold", totalCost) then
 		return { error = "not_enough_gold" }
+	end
+	do
+		local QuestService = tryGetQuestService()
+		if QuestService then QuestService.onGoldSpent(player, totalCost) end
 	end
 
 	-- Unlock-Flag setzen sobald Pack einmal gekauft wurde

@@ -32,6 +32,24 @@ Logger.info("Economy + Pack services loaded.")
 local InventoryService = require(script.services.InventoryService)
 local TempleService = require(script.services.TempleService)
 Logger.info("Inventory + Temple services loaded.")
+
+-- Stage 4: Quests + Daily + Login
+local QuestService = require(script.services.QuestService)
+Logger.info("QuestService loaded.")
+
+-- Stage 5: Rebirth + Divinity
+local RebirthService = require(script.services.RebirthService)
+local DivinityService = require(script.services.DivinityService)
+Logger.info("Rebirth + Divinity services loaded.")
+
+-- Stage 6: Fusion + Broadcast
+local BroadcastService = require(script.services.BroadcastService)
+local FusionService = require(script.services.FusionService)
+Logger.info("Broadcast + Fusion services loaded.")
+
+-- Test-/Admin-Chatbefehle (z. B. /money zum Geld geben)
+local CommandService = require(script.services.CommandService)
+Logger.info("CommandService loaded.")
 -- TODO Stage 3: InventoryService, TempleService
 -- TODO Stage 5: RebirthService, DivinityService
 -- TODO Stage 6: FusionService, BroadcastService
