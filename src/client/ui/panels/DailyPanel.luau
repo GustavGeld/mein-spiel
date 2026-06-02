@@ -2,7 +2,6 @@
 -- DailyPanel — Login-Streak (7 Day Calendar) + Minute Reward.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared.remotes.Net)
@@ -208,9 +207,6 @@ local function minuteCard(parent: Instance, snapshot, onClaim: () -> ()): () -> 
 	end)
 
 	-- Auto-Refresh jede Sekunde (Cooldown-Anzeige)
-	local conn = RunService.Heartbeat:Connect(function()
-		if not box.Parent then conn:Disconnect(); return end
-	end)
 	task.spawn(function()
 		while box.Parent do
 			task.wait(1)

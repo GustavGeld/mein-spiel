@@ -257,7 +257,7 @@ Net:Function("RequestProfile").OnServerInvoke = function(player: Player)
 		lifetime = { gold = profile.lifetime.gold, rebirths = profile.lifetime.rebirths },
 		inventory = { gods = profile.inventory.gods },
 		temple = profile.temple,
-		unlocks = profile.unlocks,
+		unlocks = { packs = profile.unlocks.packs, gamepasses = profile.unlocks.gamepasses },
 		settings = profile.settings,
 		quests = profile.quests,
 		divinity = profile.divinity,

@@ -47,12 +47,15 @@ local BroadcastService = require(script.services.BroadcastService)
 local FusionService = require(script.services.FusionService)
 Logger.info("Broadcast + Fusion services loaded.")
 
+-- Stage 7: Gamepasses + Dev Products
+local GamepassService = require(script.services.GamepassService)
+Logger.info("GamepassService loaded.")
+
+-- Stage 8: Trading
+local TradeService = require(script.services.TradeService)
+Logger.info("TradeService loaded.")
+
 -- Test-/Admin-Chatbefehle (z. B. /money zum Geld geben)
 local CommandService = require(script.services.CommandService)
 Logger.info("CommandService loaded.")
--- TODO Stage 3: InventoryService, TempleService
--- TODO Stage 5: RebirthService, DivinityService
--- TODO Stage 6: FusionService, BroadcastService
--- TODO Stage 7: GamepassService
--- TODO Stage 8: TradeService
 -- TODO Stage 9: LeaderboardService, SeasonService

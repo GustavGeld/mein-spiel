@@ -57,6 +57,12 @@ Net:Function("RebirthConfirm").OnServerInvoke = function(player: Player)
 		applyReset(p)
 		p.lifetime.rebirths = (p.lifetime.rebirths or 0) + 1
 		p.currencies.divinity = (p.currencies.divinity or 0) + gain
+		-- Gamepass-Side-Effects nach dem Reset wiederherstellen
+		if p.unlocks.gamepasses["extraSlots"] then
+			for _ = 1, 3 do
+				table.insert(p.temple.slots, { godUid = nil })
+			end
+		end
 	end)
 
 	-- replikiere alle betroffenen Bereiche

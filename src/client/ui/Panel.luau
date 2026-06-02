@@ -18,18 +18,24 @@ export type PanelHandle = {
 	destroy: () -> (),
 }
 
-function Panel.create(parent: Instance, titleText: string, onClose: () -> ()): PanelHandle
+function Panel.create(parent: Instance, titleText: string, onClose: () -> (), sizeOverride: UDim2?): PanelHandle
 	local root = Instance.new("Frame")
 	root.Name = "Panel"
 	root.AnchorPoint = Vector2.new(0.5, 0.5)
 	root.Position = UDim2.fromScale(0.5, 0.5)
-	root.Size = UDim2.fromOffset(720, 480)
+	root.Size = sizeOverride or UDim2.fromOffset(820, 560)
 	root.BackgroundColor3 = Theme.color.panel
 	root.BackgroundTransparency = 0.05
 	root.BorderSizePixel = 0
 	root.Parent = parent
 	Util.corner(root, Theme.radius.lg)
 	Util.stroke(root)
+
+	-- Bei Bildschirmen, die kleiner sind als das Panel, ratiomäßig auf 90 % skalieren.
+	local sizeConstraint = Instance.new("UISizeConstraint")
+	sizeConstraint.MaxSize = Vector2.new(1280, 820)
+	sizeConstraint.MinSize = Vector2.new(420, 360)
+	sizeConstraint.Parent = root
 
 	local header = Instance.new("Frame")
 	header.Name = "Header"
@@ -49,18 +55,32 @@ function Panel.create(parent: Instance, titleText: string, onClose: () -> ()): P
 	title.Text = titleText
 	title.Parent = header
 
-	local closeBtn = Instance.new("TextButton")
+	-- Close-Button: bevorzugt das Image-Asset; falls keins gesetzt ist, Text-Fallback.
+	local hasCloseAsset = Icons.close.assetId ~= "" and Icons.close.assetId ~= "rbxassetid://0"
+	local closeBtn: GuiButton
+	if hasCloseAsset then
+		local ib = Instance.new("ImageButton")
+		ib.BackgroundTransparency = 1
+		ib.Image = Icons.close.assetId
+		ib.ImageColor3 = Color3.fromRGB(255, 255, 255)
+		ib.ScaleType = Enum.ScaleType.Fit
+		closeBtn = ib
+	else
+		local tb = Instance.new("TextButton")
+		tb.BackgroundColor3 = Theme.color.panelLight
+		tb.Font = Theme.font.heading
+		tb.TextSize = 22
+		tb.TextColor3 = Theme.color.textPrimary
+		tb.Text = Icons.close.fallback
+		Util.corner(tb, Theme.radius.sm)
+		closeBtn = tb
+	end
 	closeBtn.AnchorPoint = Vector2.new(1, 0.5)
 	closeBtn.Position = UDim2.new(1, -14, 0.5, 0)
-	closeBtn.Size = UDim2.fromOffset(36, 36)
-	closeBtn.BackgroundColor3 = Theme.color.panelLight
+	closeBtn.Size = UDim2.fromOffset(40, 40)
+	closeBtn.AutoButtonColor = true
 	closeBtn.BorderSizePixel = 0
-	closeBtn.Font = Theme.font.heading
-	closeBtn.TextSize = 22
-	closeBtn.TextColor3 = Theme.color.textPrimary
-	closeBtn.Text = Icons.close.fallback
 	closeBtn.Parent = header
-	Util.corner(closeBtn, Theme.radius.sm)
 
 	closeBtn.Activated:Connect(onClose)
 

@@ -22,6 +22,7 @@ local Icons = {
 	trade     = icon("rbxassetid://98361262424095", "🔄"),
 	fusion    = icon("rbxassetid://0", "⚡"),
 	rebirth   = icon("rbxassetid://85540634188859", "♻"),
+	gamepasses = icon("rbxassetid://0", "💎"),
 	settings  = icon("rbxassetid://93700586176429", "⚙"),
 
 	-- Währungen / Sonstiges
@@ -33,7 +34,7 @@ local Icons = {
 	lock      = icon("rbxassetid://0", "🔒"),
 	filter    = icon("rbxassetid://0", "⛃"),
 	sort      = icon("rbxassetid://0", "↕"),
-	close     = icon("rbxassetid://0", "✕"),
+	close     = icon("rbxassetid://84399223297180", "✕"),
 }
 
 return Icons

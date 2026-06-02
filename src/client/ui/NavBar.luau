@@ -1,6 +1,6 @@
 --!strict
--- NavBar — vertikale Spalte quadratischer Tiles im Cartoon-Stil.
--- Cremiger Hintergrund, dicker brauner Rand, Icon oben, Label unten.
+-- NavBar — 2 Reihen x 6 Spalten quadratischer Tiles im Cartoon-Stil.
+-- Hellblauer Hintergrund, dunkelblauer Rand, Icon oben, Label unten.
 
 local TweenService = game:GetService("TweenService")
 
@@ -29,6 +29,7 @@ NavBar.items = {
 	{ id = "trade",     labelKey = "nav.trade",       icon = Icons.trade     },
 	{ id = "fusion",    labelKey = "nav.fusion",      icon = Icons.fusion    },
 	{ id = "rebirth",   labelKey = "nav.rebirth",     icon = Icons.rebirth   },
+	{ id = "gamepasses",labelKey = "nav.gamepasses",  icon = Icons.gamepasses},
 	{ id = "settings",  labelKey = "nav.settings",    icon = Icons.settings  },
 }
 
@@ -37,6 +38,7 @@ local SPACING     = 8
 local ICON_SIZE   = 56
 local CORNER      = UDim.new(0, 18)
 local STROKE      = 3
+local COLUMNS     = 2   -- 2 Spalten -> Tiles wachsen vertikal in zwei Bahnen
 
 local TILE_FILL   = Color3.fromRGB(170, 215, 255)  -- hellblau
 local TILE_HOVER  = Color3.fromRGB(200, 232, 255)
@@ -45,24 +47,34 @@ local LABEL_COLOR = Color3.fromRGB(20, 45, 90)
 
 function NavBar.create(parent: Instance, onTabSelected: (id: string) -> ()): Frame
 	local n = #NavBar.items
-	local height = n * TILE + (n - 1) * SPACING
+	local rows = math.ceil(n / COLUMNS)
+	local width  = COLUMNS * TILE + (COLUMNS - 1) * SPACING
+	local height = rows    * TILE + (rows    - 1) * SPACING
 
 	local frame = Instance.new("Frame")
 	frame.Name = "NavBar"
-	frame.AnchorPoint = Vector2.new(0, 1)
-	-- Über der Geld-Anzeige (~70px hoch inkl. padding) positionieren.
-	frame.Position = UDim2.new(0, 18, 1, -90)
-	frame.Size = UDim2.fromOffset(TILE, height)
+	-- Vertikal mittig auf der linken Seite — fühlt sich balancierter an als ganz unten.
+	frame.AnchorPoint = Vector2.new(0, 0.5)
+	frame.Position = UDim2.new(0, 18, 0.5, 0)
+	frame.Size = UDim2.fromOffset(width, height)
 	frame.BackgroundTransparency = 1
 	frame.Parent = parent
-	Util.listLayout(frame, Enum.FillDirection.Vertical, SPACING)
 
-	for _, item in ipairs(NavBar.items) do
+	-- Grid-Layout statt vertikaler Spalte
+	local grid = Instance.new("UIGridLayout")
+	grid.CellSize = UDim2.fromOffset(TILE, TILE)
+	grid.CellPadding = UDim2.fromOffset(SPACING, SPACING)
+	grid.FillDirection = Enum.FillDirection.Horizontal
+	grid.FillDirectionMaxCells = COLUMNS
+	grid.SortOrder = Enum.SortOrder.LayoutOrder
+	grid.Parent = frame
+
+	for index, item in ipairs(NavBar.items) do
 		local btn = Instance.new("TextButton")
 		btn.AutoButtonColor = false
 		btn.BackgroundColor3 = TILE_FILL
 		btn.BorderSizePixel = 0
-		btn.Size = UDim2.fromOffset(TILE, TILE)
+		btn.LayoutOrder = index
 		btn.Text = ""
 		btn.Parent = frame
 
@@ -105,22 +117,13 @@ function NavBar.create(parent: Instance, onTabSelected: (id: string) -> ()): Fra
 		label.Text = Locale.t(item.labelKey)
 		label.Parent = btn
 
-		-- Hover: leicht aufhellen + minimal vergrößern, Click: kurz "drücken".
-		local baseSize = UDim2.fromOffset(TILE, TILE)
-		local hoverSize = UDim2.fromOffset(TILE + 4, TILE + 4)
+		-- Hover: nur Farb-Tween (UIGridLayout würde Size-Tweens überschreiben).
 		local hoverTI = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
 		btn.MouseEnter:Connect(function()
-			TweenService:Create(btn, hoverTI, { BackgroundColor3 = TILE_HOVER, Size = hoverSize }):Play()
+			TweenService:Create(btn, hoverTI, { BackgroundColor3 = TILE_HOVER }):Play()
 		end)
 		btn.MouseLeave:Connect(function()
-			TweenService:Create(btn, hoverTI, { BackgroundColor3 = TILE_FILL, Size = baseSize }):Play()
-		end)
-		btn.MouseButton1Down:Connect(function()
-			btn.Size = UDim2.fromOffset(TILE - 2, TILE - 2)
-		end)
-		btn.MouseButton1Up:Connect(function()
-			TweenService:Create(btn, hoverTI, { Size = baseSize }):Play()
+			TweenService:Create(btn, hoverTI, { BackgroundColor3 = TILE_FILL }):Play()
 		end)
 		btn.Activated:Connect(function() onTabSelected(item.id) end)
 	end

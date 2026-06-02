@@ -23,6 +23,7 @@ export type GodCardData = {
 	fusionRank: number?,
 	secret: boolean?,
 	discovered: boolean,
+	cardSize: Vector2?,   -- optional override (default 160 x 220)
 }
 
 -- Initial-Buchstabe aus z.B. "Hermes_Apprentice" → "H"
@@ -49,11 +50,25 @@ function GodCard.create(parent: Instance, data: GodCardData, onClick: (() -> ())
 	local color = rarityDef and rarityDef.color or Theme.color.panelLight
 	local godDef = Gods.byId[data.godId]
 
+	local cardSize = data.cardSize or Vector2.new(160, 220)
+	local W, H = cardSize.X, cardSize.Y
+
+	-- Proportionale Layout-Größen, damit größere Karten auch ein größeres PNG bekommen.
+	local STRIP_H   = math.floor(H * 0.11)
+	local ICON_TOP  = STRIP_H + math.floor(H * 0.04)
+	local ICON_SIZE = math.floor(math.min(W * 0.78, H * 0.52))
+	local NAME_Y    = ICON_TOP + ICON_SIZE + math.floor(H * 0.025)
+	local NAME_H    = math.floor(H * 0.10)
+	local ODDS_Y    = NAME_Y + NAME_H
+	local ODDS_H    = math.floor(H * 0.08)
+	local STATS_Y   = ODDS_Y + ODDS_H + 2
+	local STATS_H   = H - STATS_Y - 6
+
 	local card = Instance.new("TextButton")
 	card.AutoButtonColor = false
 	card.BackgroundColor3 = tinted(color, 0.15)
 	card.BorderSizePixel = 0
-	card.Size = UDim2.fromOffset(160, 220)
+	card.Size = UDim2.fromOffset(W, H)
 	card.Text = ""
 	card.AutoLocalize = false
 	card.Parent = parent
@@ -64,7 +79,7 @@ function GodCard.create(parent: Instance, data: GodCardData, onClick: (() -> ())
 	local rarityStrip = Instance.new("Frame")
 	rarityStrip.BackgroundColor3 = color
 	rarityStrip.BorderSizePixel = 0
-	rarityStrip.Size = UDim2.new(1, 0, 0, 24)
+	rarityStrip.Size = UDim2.new(1, 0, 0, STRIP_H)
 	rarityStrip.Parent = card
 	Util.corner(rarityStrip, Theme.radius.md)
 
@@ -72,19 +87,19 @@ function GodCard.create(parent: Instance, data: GodCardData, onClick: (() -> ())
 	rarityLabel.BackgroundTransparency = 1
 	rarityLabel.Size = UDim2.fromScale(1, 1)
 	rarityLabel.Font = Theme.font.bold
-	rarityLabel.TextSize = 13
+	rarityLabel.TextSize = math.floor(STRIP_H * 0.62)
 	rarityLabel.TextColor3 = Color3.fromRGB(20, 20, 30)
 	rarityLabel.Text = rarityDef and Locale.t(rarityDef.nameKey) or data.rarityId
 	rarityLabel.Parent = rarityStrip
 
-	-- Icon-Bühne (mittig)
+	-- Icon-Bühne — füllt jetzt deutlich mehr von der Karte aus.
 	local iconWell = Instance.new("Frame")
 	iconWell.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 	iconWell.BackgroundTransparency = 0.85
 	iconWell.BorderSizePixel = 0
 	iconWell.AnchorPoint = Vector2.new(0.5, 0)
-	iconWell.Position = UDim2.new(0.5, 0, 0, 32)
-	iconWell.Size = UDim2.fromOffset(96, 96)
+	iconWell.Position = UDim2.new(0.5, 0, 0, ICON_TOP)
+	iconWell.Size = UDim2.fromOffset(ICON_SIZE, ICON_SIZE)
 	iconWell.Parent = card
 	Util.corner(iconWell, UDim.new(0.18, 0))
 
@@ -94,7 +109,7 @@ function GodCard.create(parent: Instance, data: GodCardData, onClick: (() -> ())
 		img.BackgroundTransparency = 1
 		img.AnchorPoint = Vector2.new(0.5, 0.5)
 		img.Position = UDim2.fromScale(0.5, 0.5)
-		img.Size = UDim2.fromScale(0.86, 0.86)
+		img.Size = UDim2.fromScale(0.94, 0.94)
 		img.Image = godDef.iconAssetId :: string
 		img.ScaleType = Enum.ScaleType.Fit
 		img.Parent = iconWell
@@ -103,7 +118,7 @@ function GodCard.create(parent: Instance, data: GodCardData, onClick: (() -> ())
 		fallback.BackgroundTransparency = 1
 		fallback.Size = UDim2.fromScale(1, 1)
 		fallback.Font = Theme.font.heading
-		fallback.TextSize = 56
+		fallback.TextSize = math.floor(ICON_SIZE * 0.6)
 		fallback.TextColor3 = data.discovered and color or Theme.color.textMuted
 		fallback.Text = data.discovered and initialOf(data.godId) or "?"
 		fallback.Parent = iconWell
@@ -112,10 +127,10 @@ function GodCard.create(parent: Instance, data: GodCardData, onClick: (() -> ())
 	-- Gott-Name
 	local godName = Instance.new("TextLabel")
 	godName.BackgroundTransparency = 1
-	godName.Position = UDim2.fromOffset(8, 134)
-	godName.Size = UDim2.new(1, -16, 0, 20)
+	godName.Position = UDim2.fromOffset(8, NAME_Y)
+	godName.Size = UDim2.new(1, -16, 0, NAME_H)
 	godName.Font = Theme.font.heading
-	godName.TextSize = 14
+	godName.TextSize = math.floor(NAME_H * 0.72)
 	godName.TextColor3 = Theme.color.textPrimary
 	godName.TextTruncate = Enum.TextTruncate.AtEnd
 	godName.TextXAlignment = Enum.TextXAlignment.Center
@@ -125,10 +140,10 @@ function GodCard.create(parent: Instance, data: GodCardData, onClick: (() -> ())
 	-- Wahrscheinlichkeit
 	local odds = Instance.new("TextLabel")
 	odds.BackgroundTransparency = 1
-	odds.Position = UDim2.fromOffset(8, 156)
-	odds.Size = UDim2.new(1, -16, 0, 18)
+	odds.Position = UDim2.fromOffset(8, ODDS_Y)
+	odds.Size = UDim2.new(1, -16, 0, ODDS_H)
 	odds.Font = Theme.font.bold
-	odds.TextSize = 12
+	odds.TextSize = math.floor(ODDS_H * 0.7)
 	odds.TextColor3 = color
 	odds.TextXAlignment = Enum.TextXAlignment.Center
 	odds.Text = Odds.displayOdds(data.packTier, data.rarityId)
@@ -137,17 +152,18 @@ function GodCard.create(parent: Instance, data: GodCardData, onClick: (() -> ())
 	-- Stats
 	local statBox = Instance.new("Frame")
 	statBox.BackgroundTransparency = 1
-	statBox.Position = UDim2.fromOffset(8, 178)
-	statBox.Size = UDim2.new(1, -16, 0, 36)
+	statBox.Position = UDim2.fromOffset(8, STATS_Y)
+	statBox.Size = UDim2.new(1, -16, 0, STATS_H)
 	statBox.Parent = card
 
+	local STAT_LINE = math.floor(STATS_H / 2)
 	local function statRow(text: string, color3: Color3, y: number)
 		local l = Instance.new("TextLabel")
 		l.BackgroundTransparency = 1
 		l.Position = UDim2.fromOffset(0, y)
-		l.Size = UDim2.new(1, 0, 0, 16)
+		l.Size = UDim2.new(1, 0, 0, STAT_LINE)
 		l.Font = Theme.font.bold
-		l.TextSize = 12
+		l.TextSize = math.floor(STAT_LINE * 0.78)
 		l.TextColor3 = color3
 		l.TextXAlignment = Enum.TextXAlignment.Center
 		l.Text = text
@@ -157,10 +173,10 @@ function GodCard.create(parent: Instance, data: GodCardData, onClick: (() -> ())
 	if data.discovered and godDef then
 		statRow(string.format("$%s/s", Odds.formatBig(godDef.baseProduction)), Theme.color.money, 0)
 		if godDef.baseFaith > 0 then
-			statRow(string.format("✨ %s/s", Odds.formatBig(godDef.baseFaith)), Theme.color.faith, 18)
+			statRow(string.format("✨ %s/s", Odds.formatBig(godDef.baseFaith)), Theme.color.faith, STAT_LINE)
 		end
 		if data.fusionRank and data.fusionRank > 0 then
-			statRow(string.format("⚡ Fusion %d", data.fusionRank), Theme.color.accent, 18)
+			statRow(string.format("⚡ Fusion %d", data.fusionRank), Theme.color.accent, STAT_LINE)
 		end
 	else
 		statRow("???", Theme.color.textMuted, 0)

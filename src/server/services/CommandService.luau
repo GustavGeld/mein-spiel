@@ -65,6 +65,106 @@ local function handleMoney(player: Player, rest: string)
 	Logger.info("%s added %d money", player.Name, n)
 end
 
+-- ─── Inventar-Befehle ────────────────────────────────────────────────────────
+--   /inv clear              → leert alle Götter (und Temple-Slots)
+--   /inv delete <rarity>    → entfernt alle Götter dieser Seltenheit
+--   /inv delete all         → wie clear
+--   /inv count              → zeigt aktuelle Anzahl Götter
+local function clearTempleSlots(profile)
+	for _, slot in ipairs(profile.temple.slots) do
+		slot.godUid = nil
+	end
+end
+
+local function clearAllGods(player: Player)
+	PlayerDataService.update(player, function(profile)
+		profile.inventory.gods = {}
+		clearTempleSlots(profile)
+	end)
+	PlayerDataService.patchInventory(player)
+	PlayerDataService.patchTemple(player)
+end
+
+local function deleteByRarity(player: Player, rarityId: string)
+	rarityId = rarityId:lower()
+	local removedUids: { [string]: boolean } = {}
+	PlayerDataService.update(player, function(profile)
+		local keep = {}
+		for _, entry in ipairs(profile.inventory.gods) do
+			if entry.rarityId:lower() == rarityId then
+				removedUids[entry.uid] = true
+			else
+				table.insert(keep, entry)
+			end
+		end
+		profile.inventory.gods = keep
+		-- Temple-Slots, die auf entfernte UIDs verweisen, frei machen.
+		for _, slot in ipairs(profile.temple.slots) do
+			if slot.godUid and removedUids[slot.godUid] then
+				slot.godUid = nil
+			end
+		end
+	end)
+	PlayerDataService.patchInventory(player)
+	PlayerDataService.patchTemple(player)
+end
+
+local function handleInv(player: Player, rest: string)
+	local sub, arg = rest:match("^(%S+)%s*(.*)$")
+	sub = sub and sub:lower() or ""
+	if sub == "clear" or (sub == "delete" and (arg == "all" or arg == "")) then
+		clearAllGods(player)
+		Logger.info("%s cleared inventory", player.Name)
+	elseif sub == "delete" then
+		deleteByRarity(player, arg)
+		Logger.info("%s deleted rarity '%s'", player.Name, arg)
+	elseif sub == "count" then
+		local profile = PlayerDataService.get(player)
+		if profile then
+			Logger.info("%s has %d gods", player.Name, #profile.inventory.gods)
+		end
+	end
+end
+
+-- ─── Gamepass-Befehle (Studio-only via canUse) ───────────────────────────────
+--   /pass <flag>            → toggle Pass an/aus
+local function handlePass(player: Player, rest: string)
+	local typed = rest:match("^(%S+)") or ""
+	if typed == "" then return end
+	-- Case-insensitive Lookup, weil rest schon lower-cased ankommt.
+	local Gamepasses = require(Shared.config.Gamepasses)
+	local flag: string? = nil
+	for f in pairs(Gamepasses.byFlag) do
+		if f:lower() == typed then flag = f; break end
+	end
+	if not flag then return end
+	local profile = PlayerDataService.get(player)
+	if not profile then return end
+	local current = profile.unlocks.gamepasses[flag] == true
+	PlayerDataService.update(player, function(p)
+		p.unlocks.gamepasses[flag] = not current
+	end)
+	-- extraSlots: Tempel-Größe anpassen
+	if flag == "extraSlots" then
+		PlayerDataService.update(player, function(p)
+			if not current then
+				for _ = 1, 3 do table.insert(p.temple.slots, { godUid = nil }) end
+			else
+				while #p.temple.slots > 3 do table.remove(p.temple.slots, #p.temple.slots) end
+			end
+		end)
+		PlayerDataService.patchTemple(player)
+	end
+	local Net = require(Shared.remotes.Net)
+	pcall(function()
+		profile = PlayerDataService.get(player)
+		if profile then
+			Net:Event("OnGamepassUpdate"):FireClient(player, profile.unlocks.gamepasses)
+		end
+	end)
+	Logger.info("%s [/pass] %s -> %s", player.Name, flag, tostring(not current))
+end
+
 local function handle(player: Player, message: string)
 	if not canUse(player) then return end
 	local cmd, rest = message:lower():match("^/(%S+)%s*(.*)$")
@@ -72,6 +172,10 @@ local function handle(player: Player, message: string)
 
 	if cmd == "money" or cmd == "givemoney" or cmd == "cash" then
 		handleMoney(player, rest)
+	elseif cmd == "inv" or cmd == "inventory" then
+		handleInv(player, rest)
+	elseif cmd == "pass" or cmd == "gp" then
+		handlePass(player, rest)
 	end
 end
 

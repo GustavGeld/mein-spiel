@@ -25,6 +25,10 @@ return {
 		ChangeSetting = true,
 		SwitchLanguage = true,
 		RequestProfile = true,
+		PromptGamepass = true,
+		PromptDevProduct = true,
+		DebugTogglePass = true,
+		DebugInventory = true,
 	} :: { [string]: boolean },
 
 	Events = {
@@ -39,5 +43,6 @@ return {
 		OnLocaleUpdate = true,
 		OnTradeUpdate = true,
 		OnAuctionUpdate = true,
+		OnGamepassUpdate = true,
 	} :: { [string]: boolean },
 }

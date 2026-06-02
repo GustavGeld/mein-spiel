@@ -15,6 +15,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared.remotes.Net)
 local Locale = require(Shared.locale.Locale)
 local Rarities = require(Shared.config.Rarities)
+local Gods = require(Shared.config.Gods)
 local Odds = require(Shared.math.Odds)
 
 local LocalPlayer = Players.LocalPlayer
@@ -24,11 +25,19 @@ local RollController = {}
 
 local CINEMATIC_STEP_MS  = 110  -- ms pro Vorschau-Wechsel
 local CINEMATIC_HOLD     = 1.2
+-- Skip-Fast Gamepass-Modifikatoren
+local SKIP_STEP_MS       = 35
+local SKIP_HOLD          = 0.4
 
 -- Auto-Roll-Flag: wird von ShopPanel/AutoRollController gesetzt.
 local autoMode = false
 function RollController.setAutoMode(v: boolean) autoMode = v end
 function RollController.isAutoMode(): boolean return autoMode end
+
+-- Skip-Fast (Gamepass): kürzere Animation
+local skipFast = false
+function RollController.setSkipFast(v: boolean) skipFast = v end
+function RollController.isSkipFast(): boolean return skipFast end
 
 local function getOrCreateScreen(): ScreenGui
 	local existing = PlayerGui:FindFirstChild("RollScreen")
@@ -50,14 +59,14 @@ local function getOrCreateScreen(): ScreenGui
 	bg.BorderSizePixel = 0
 	bg.Parent = sg
 
-	-- Cinematic Card (für Roll-Phase)
+	-- Cinematic Card (für Roll-Phase) — größer für sichtbares PNG.
 	local card = Instance.new("Frame")
 	card.Name = "Card"
 	card.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 	card.BorderSizePixel = 0
 	card.AnchorPoint = Vector2.new(0.5, 0.5)
 	card.Position = UDim2.fromScale(0.5, 0.5)
-	card.Size = UDim2.fromOffset(420, 280)
+	card.Size = UDim2.fromOffset(520, 440)
 	card.Parent = bg
 
 	local corner = Instance.new("UICorner", card)
@@ -80,12 +89,40 @@ local function getOrCreateScreen(): ScreenGui
 	rarityLabel.Text = "—"
 	rarityLabel.Parent = card
 
+	-- Großer PNG-Spot in der Mitte. ImageLabel + Fallback-Letter überlagert.
+	local iconWell = Instance.new("Frame")
+	iconWell.Name = "IconWell"
+	iconWell.BackgroundTransparency = 1
+	iconWell.AnchorPoint = Vector2.new(0.5, 0)
+	iconWell.Position = UDim2.new(0.5, 0, 0, 90)
+	iconWell.Size = UDim2.fromOffset(240, 240)
+	iconWell.Parent = card
+
+	local iconImg = Instance.new("ImageLabel")
+	iconImg.Name = "IconImg"
+	iconImg.BackgroundTransparency = 1
+	iconImg.Size = UDim2.fromScale(1, 1)
+	iconImg.Image = ""
+	iconImg.ScaleType = Enum.ScaleType.Fit
+	iconImg.Visible = false
+	iconImg.Parent = iconWell
+
+	local iconFallback = Instance.new("TextLabel")
+	iconFallback.Name = "IconFallback"
+	iconFallback.BackgroundTransparency = 1
+	iconFallback.Size = UDim2.fromScale(1, 1)
+	iconFallback.Font = Enum.Font.GothamBlack
+	iconFallback.TextScaled = true
+	iconFallback.TextColor3 = Color3.fromRGB(255, 255, 255)
+	iconFallback.Text = "?"
+	iconFallback.Parent = iconWell
+
 	local godLabel = Instance.new("TextLabel")
 	godLabel.Name = "GodLabel"
 	godLabel.BackgroundTransparency = 1
-	godLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-	godLabel.Position = UDim2.fromScale(0.5, 0.5)
-	godLabel.Size = UDim2.new(1, -32, 0, 80)
+	godLabel.AnchorPoint = Vector2.new(0.5, 0)
+	godLabel.Position = UDim2.new(0.5, 0, 0, 338)
+	godLabel.Size = UDim2.new(1, -32, 0, 40)
 	godLabel.Font = Enum.Font.GothamBold
 	godLabel.TextScaled = true
 	godLabel.TextColor3 = Color3.fromRGB(230, 230, 230)
@@ -105,6 +142,31 @@ local function getOrCreateScreen(): ScreenGui
 	oddsLabel.Parent = card
 
 	return sg
+end
+
+local function displayName(id: string): string
+	return (string.gsub(id, "_", " "))
+end
+
+local function applyGodVisual(card: Frame, godId: string?, color: Color3)
+	local iconWell = card:FindFirstChild("IconWell") :: Frame?
+	if not iconWell then return end
+	local img = iconWell:FindFirstChild("IconImg") :: ImageLabel?
+	local fb = iconWell:FindFirstChild("IconFallback") :: TextLabel?
+	local def = godId and Gods.byId[godId] or nil
+	local assetId = def and def.iconAssetId
+	if img and assetId and assetId ~= "" then
+		img.Image = assetId
+		img.Visible = true
+		if fb then fb.Visible = false end
+	else
+		if img then img.Visible = false end
+		if fb then
+			fb.Visible = true
+			fb.TextColor3 = color
+			fb.Text = godId and string.upper(string.sub(godId, 1, 1)) or "?"
+		end
+	end
 end
 
 local function applyRarity(card: Frame, rarityId: string, packId: number)
@@ -139,25 +201,33 @@ local function playCinematic(sg: ScreenGui, packId: number, result: any)
 	card.Visible = true
 	local godLabel = card:FindFirstChild("GodLabel") :: TextLabel
 
-	local stepDuration = CINEMATIC_STEP_MS / 1000
+	local baseStep = (skipFast and SKIP_STEP_MS or CINEMATIC_STEP_MS) / 1000
+	local hold     = skipFast and SKIP_HOLD or CINEMATIC_HOLD
+	local stepDuration = baseStep
 	for previewIndex, previewRarityId in ipairs(result.preview) do
 		applyRarity(card, previewRarityId, packId)
-		godLabel.Text = previewRarityId
+		local rDef = Rarities.byId[previewRarityId]
+		local color = (rDef and rDef.color) or Color3.fromRGB(200, 200, 200)
+		applyGodVisual(card, nil, color)  -- Preview: nur Letter, kein PNG
+		godLabel.Text = displayName(previewRarityId)
 		local remaining = #result.preview - previewIndex
-		if remaining < 3 then
+		if remaining < 3 and not skipFast then
 			stepDuration = math.max(0.18, stepDuration * 1.5)
 		end
 		task.wait(stepDuration)
 	end
-	-- Final reveal
+	-- Final reveal mit echtem God-Icon
 	applyRarity(card, result.rarityId, packId)
-	godLabel.Text = result.rarityId
+	local finalDef = Rarities.byId[result.rarityId]
+	local finalColor = (finalDef and finalDef.color) or Color3.fromRGB(255, 255, 255)
+	applyGodVisual(card, result.godId, finalColor)
+	godLabel.Text = result.godId and displayName(result.godId) or result.rarityId
 
 	if result.isSecret then
 		(sg.Dim :: Frame).BackgroundTransparency = 0.1
-		task.wait(CINEMATIC_HOLD * 1.8)
+		task.wait(hold * 1.8)
 	else
-		task.wait(CINEMATIC_HOLD)
+		task.wait(hold)
 	end
 end
 
@@ -178,7 +248,7 @@ local function showResultsGrid(sg: ScreenGui, packId: number, results: { any })
 	box.Position = UDim2.fromScale(0.5, 0.5)
 	box.BackgroundColor3 = Color3.fromRGB(22, 24, 36)
 	box.BorderSizePixel = 0
-	box.Size = UDim2.fromOffset(640, 460)
+	box.Size = UDim2.fromOffset(800, 560)
 	box.Parent = dim
 	local boxCorner = Instance.new("UICorner", box)
 	boxCorner.CornerRadius = UDim.new(0, 18)
@@ -210,14 +280,15 @@ local function showResultsGrid(sg: ScreenGui, packId: number, results: { any })
 	grid.Parent = box
 
 	local layout = Instance.new("UIGridLayout")
-	layout.CellSize = UDim2.fromOffset(118, 160)
-	layout.CellPadding = UDim2.fromOffset(8, 8)
+	layout.CellSize = UDim2.fromOffset(150, 200)  -- größer für sichtbares PNG
+	layout.CellPadding = UDim2.fromOffset(10, 10)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = grid
 
 	for i, result in ipairs(results) do
 		local def = Rarities.byId[result.rarityId]
 		local color = def and def.color or Color3.fromRGB(180, 180, 180)
+		local godDef = result.godId and Gods.byId[result.godId] or nil
 		local cell = Instance.new("Frame")
 		cell.BackgroundColor3 = Color3.fromRGB(30, 34, 48)
 		cell.BorderSizePixel = 0
@@ -246,22 +317,51 @@ local function showResultsGrid(sg: ScreenGui, packId: number, results: { any })
 		rarityName.Text = def and Locale.t(def.nameKey) or result.rarityId
 		rarityName.Parent = strip
 
-		local big = Instance.new("TextLabel")
-		big.BackgroundTransparency = 1
-		big.AnchorPoint = Vector2.new(0.5, 0.5)
-		big.Position = UDim2.fromScale(0.5, 0.5)
-		big.Size = UDim2.fromOffset(80, 80)
-		big.Font = Enum.Font.GothamBlack
-		big.TextSize = 48
-		big.TextColor3 = color
-		big.Text = string.upper(string.sub(result.rarityId, 1, 1))
-		big.Parent = cell
+		-- Großes God-PNG falls vorhanden, sonst Initial.
+		local iconWell = Instance.new("Frame")
+		iconWell.BackgroundTransparency = 1
+		iconWell.AnchorPoint = Vector2.new(0.5, 0)
+		iconWell.Position = UDim2.new(0.5, 0, 0, 28)
+		iconWell.Size = UDim2.fromOffset(110, 110)
+		iconWell.Parent = cell
+
+		if godDef and godDef.iconAssetId and godDef.iconAssetId ~= "" then
+			local img = Instance.new("ImageLabel")
+			img.BackgroundTransparency = 1
+			img.Size = UDim2.fromScale(1, 1)
+			img.Image = godDef.iconAssetId
+			img.ScaleType = Enum.ScaleType.Fit
+			img.Parent = iconWell
+		else
+			local letter = Instance.new("TextLabel")
+			letter.BackgroundTransparency = 1
+			letter.Size = UDim2.fromScale(1, 1)
+			letter.Font = Enum.Font.GothamBlack
+			letter.TextSize = 64
+			letter.TextColor3 = color
+			letter.Text = result.godId
+				and string.upper(string.sub(result.godId, 1, 1))
+				or string.upper(string.sub(result.rarityId, 1, 1))
+			letter.Parent = iconWell
+		end
+
+		-- God-Name (oder Rarity falls kein Name)
+		local nameLbl = Instance.new("TextLabel")
+		nameLbl.BackgroundTransparency = 1
+		nameLbl.Position = UDim2.fromOffset(4, 144)
+		nameLbl.Size = UDim2.new(1, -8, 0, 18)
+		nameLbl.Font = Enum.Font.GothamBold
+		nameLbl.TextSize = 12
+		nameLbl.TextColor3 = Color3.fromRGB(245, 245, 250)
+		nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
+		nameLbl.Text = result.godId and displayName(result.godId) or (def and Locale.t(def.nameKey) or result.rarityId)
+		nameLbl.Parent = cell
 
 		local odds = Instance.new("TextLabel")
 		odds.BackgroundTransparency = 1
 		odds.AnchorPoint = Vector2.new(0.5, 1)
 		odds.Position = UDim2.new(0.5, 0, 1, -8)
-		odds.Size = UDim2.new(1, -8, 0, 18)
+		odds.Size = UDim2.new(1, -8, 0, 16)
 		odds.Font = Enum.Font.GothamMedium
 		odds.TextSize = 12
 		odds.TextColor3 = Color3.fromRGB(200, 200, 200)

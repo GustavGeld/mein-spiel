@@ -69,18 +69,30 @@ function EconomyService.getMultiplier(player: Player, currency: Currency): numbe
 	local profile = PlayerDataService.get(player)
 	if not profile then return 1 end
 	local mul = 1
+	local gp = profile.unlocks.gamepasses
 	-- Divinity-Tree Bonuses (Wealth/Devotion/Ascension Branches)
 	if currency == "gold" then
 		local lvl = profile.divinity.tree.wealth and profile.divinity.tree.wealth.goldGain or 0
 		mul *= (1 + lvl * 0.02)
-		if profile.unlocks.gamepasses["x2Gold"] then mul *= 2 end
+		if gp["x2Gold"] then mul *= 2 end
 	elseif currency == "faith" then
 		local lvl = profile.divinity.tree.devotion and profile.divinity.tree.devotion.faithGain or 0
 		mul *= (1 + lvl * 0.02)
-		if profile.unlocks.gamepasses["x2Faith"] then mul *= 2 end
+		if gp["x2Faith"] then mul *= 2 end
 	elseif currency == "offerings" then
-		if profile.unlocks.gamepasses["x2Offerings"] then mul *= 2 end
+		if gp["x2Offerings"] then mul *= 2 end
 	end
+	return mul
+end
+
+-- Luck-Multiplier: wird von Odds gelesen, mehr Glück = bessere Pull-Wahrscheinlichkeit.
+function EconomyService.getLuckMultiplier(player: Player): number
+	local profile = PlayerDataService.get(player)
+	if not profile then return 1 end
+	local mul = 1
+	local lvl = profile.divinity.tree.fortune and profile.divinity.tree.fortune.luck or 0
+	mul *= (1 + lvl * 0.03)
+	if profile.unlocks.gamepasses["x2Luck"] then mul *= 2 end
 	return mul
 end
 

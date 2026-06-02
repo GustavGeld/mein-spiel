@@ -81,7 +81,8 @@ local function checkUnlock(profile, packId: number): (boolean, string?)
 end
 
 -- Wendet Pull-Ergebnis ans Profil an: Inventory-Eintrag + Collection-Book + Lifetime-Stat.
-local function applyPull(player: Player, packId: number, rarityId: string, isSecret: boolean): string
+-- Liefert (uid, godId) zurück, damit der Caller die Icon-Asset-ID im Result mitschicken kann.
+local function applyPull(player: Player, packId: number, rarityId: string, isSecret: boolean): (string, string)
 	-- Quest-Progress (lazy gelöst, kein Hard-Dependency)
 	local QuestService = tryGetQuestService()
 	if QuestService then
@@ -110,11 +111,12 @@ local function applyPull(player: Player, packId: number, rarityId: string, isSec
 	end
 	local godPool = Gods.byRarity[rarityId]
 	local godDef = godPool and godPool[getRng(player):NextInteger(1, #godPool)] or nil
+	local godId = godDef and godDef.id or rarityId
 	local uid = HttpService:GenerateGUID(false)
 	PlayerDataService.update(player, function(profile)
 		local entry = {
 			uid = uid,
-			id = godDef and godDef.id or rarityId,
+			id = godId,
 			rarityId = rarityId,
 			packTier = Packs.byId[packId].id,
 			fusionRank = 0,
@@ -131,7 +133,7 @@ local function applyPull(player: Player, packId: number, rarityId: string, isSec
 		end
 	end)
 	PlayerDataService.patchInventory(player)
-	return uid
+	return uid, godId
 end
 
 -- Öffnet `count` Packs. Liefert Liste von Pull-Resultaten (mit Preview für UI).
@@ -139,12 +141,14 @@ local function openPacks(player: Player, packId: number, count: number)
 	local profile = PlayerDataService.get(player)
 	if not profile then return nil end
 	local rng = getRng(player)
+	local luckMul = EconomyService.getLuckMultiplier and EconomyService.getLuckMultiplier(player) or 1
 	local results = table.create(count)
 	for i = 1, count do
-		local result = Odds.roll(packId, rng, profile.pity, 1, 1)
-		local uid = applyPull(player, packId, result.rarityId, result.isSecret)
+		local result = Odds.roll(packId, rng, profile.pity, luckMul, 1)
+		local uid, godId = applyPull(player, packId, result.rarityId, result.isSecret)
 		results[i] = {
 			uid = uid,
+			godId = godId,
 			rarityId = result.rarityId,
 			isSecret = result.isSecret,
 			preview = result.preview,
@@ -159,13 +163,19 @@ local pullEvent = Net:Event("OnPullResult")
 -- Public: Kauf + Open in einem Schritt (häufigster Flow).
 local function buyAndOpen(player: Player, packId: number, count: number)
 	if type(packId) ~= "number" or type(count) ~= "number" then return nil end
-	if count < 1 or count > 50 then return nil end
+	if count < 1 then return nil end
 	if not RateLimit.consume(player, "BuyPack", 6, 3) then
 		return { error = "rate_limited" }
 	end
 
 	local profile = PlayerDataService.get(player)
 	if not profile then return nil end
+
+	-- Multi-Open Gamepass erlaubt bis 50 Packs auf einmal, sonst max 10.
+	local maxBatch = profile.unlocks.gamepasses["multiOpen"] and 50 or 10
+	if count > maxBatch then
+		return { error = "batch_too_large", max = maxBatch }
+	end
 
 	local unlocked, reason = checkUnlock(profile, packId)
 	if not unlocked then
