@@ -158,6 +158,12 @@ local function rebuildIfPanelOpen()
 	end
 end
 
+UIController.snapshot = snapshot
+
+function UIController.openPanel(id: string)
+	openPanel(id)
+end
+
 function UIController.start()
 	screen = Instance.new("ScreenGui")
 	screen.Name = "MainUI"

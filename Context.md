@@ -180,8 +180,33 @@ Leaderboards + Seasons:
 7. Hook PlayerDataService.OnSaved to write leaderboard entries
 8. New remotes: `RequestLeaderboard(category, page)`, `ClaimSeasonReward`
 
+## World interaction & temple display (2026-06-03)
+
+- `src/client/controllers/WorldInteractionController.luau` NEW — binds every
+  `ProximityPrompt` in Workspace to the matching panel. Mapping: `fusionaltar` →
+  `fusion`, `rebirthportal` → `rebirth`. Uses `UIController.openPanel(id)`.
+- `src/client/controllers/UIController.luau` exposes `openPanel(id)` + `snapshot`
+  for external controllers.
+- `src/client/controllers/TempleDisplayController.luau` NEW — paints the locally
+  equipped god of slots 1-3 onto the three `Workspace.Modelle.Tempel.Rahmen`
+  models. Slot order is decided by ascending `Z` of the Rahmen pivot. Instead of
+  putting SurfaceGuis on the mesh `Bildflache` directly (which renders unreliably
+  on custom meshes), the controller spawns its OWN flat canvas Parts welded to
+  the bildflache: 2 picture-canvases (front + back, rotate with the frame) and
+  2 stats-canvases below the frame (anchored, Heartbeat-driven sine float).
+  Picture background = rarity colour with radial glow; stats below show name +
+  rarity + Gold/s · Faith/s with a glowing `UIStroke` tinted by rarity. Image
+  from `Gods.byId[id].iconAssetId`. Listens to `OnTempleUpdate`,
+  `OnInventoryUpdate`, `Locale.LanguageChanged` and pulls `RequestProfile` once
+  on start. Rebuild is idempotent via `__TempleDisplayBuilt` attribute.
+- `init.client.luau` starts both new controllers.
+
+Slots 4-6 are intentionally left unhandled until the Tempel model gets three
+additional Rahmen.
+
 ## Next session checklist
 - [ ] Read this file first.
-- [ ] Start Stage 8 Trading — files listed above.
+- [ ] Start Stage 9 Leaderboards + Seasons — files listed above.
+- [ ] Add 3 more Rahmen to the Tempel model and extend
+      `TempleDisplayController.MAX_SLOTS` to 6.
 - [ ] Confirm user uploaded any pending Robux gamepass IDs (if testing monetisation).
-- [ ] After Stage 8: Stage 9 Leaderboards + Seasons.

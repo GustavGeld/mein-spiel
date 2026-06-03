@@ -79,6 +79,8 @@ end
 
 -- Storage layout in DataStore:
 --   { profile = <Profile>, session = { jobId = "..", updatedAt = <epoch> } }
+local IS_STUDIO = RunService:IsStudio()
+
 local function load(userId: number): Profile?
 	if not DATASTORE_AVAILABLE then
 		local cached = memoryStore[userId]
@@ -94,7 +96,9 @@ local function load(userId: number): Profile?
 			local data = old or {}
 			local now = os.time()
 			local session = data.session
-			if session and session.jobId ~= jobId and (now - (session.updatedAt or 0)) < SESSION_TIMEOUT then
+			-- In Studio bekommt jeder Play-Klick eine neue jobId, und BindToClose
+			-- gibt den Lock nicht frei → wir übernehmen Studio-Locks immer.
+			if not IS_STUDIO and session and session.jobId ~= jobId and (now - (session.updatedAt or 0)) < SESSION_TIMEOUT then
 				return nil -- jemand anderes hat aktive Session → Abbruch
 			end
 			data.session = { jobId = jobId, updatedAt = now }
