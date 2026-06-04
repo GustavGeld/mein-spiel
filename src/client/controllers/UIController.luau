@@ -23,7 +23,12 @@ local FusionPanel = require(script.Parent.Parent.ui.panels.FusionPanel)
 local GamepassPanel = require(script.Parent.Parent.ui.panels.GamepassPanel)
 local TradePanel = require(script.Parent.Parent.ui.panels.TradePanel)
 local StubPanel = require(script.Parent.Parent.ui.panels.StubPanel)
+local LeaderboardPanel = require(script.Parent.Parent.ui.panels.LeaderboardPanel)
+local SeasonPanel = require(script.Parent.Parent.ui.panels.SeasonPanel)
+local RewardsPanel = require(script.Parent.Parent.ui.panels.RewardsPanel)
+local AuctionPanel = require(script.Parent.Parent.ui.panels.AuctionPanel)
 local RollController = require(script.Parent.RollController)
+local LeaderboardController = require(script.Parent.LeaderboardController)
 local AutoRollController = require(script.Parent.AutoRollController)
 local TradeController = require(script.Parent.TradeController)
 
@@ -67,16 +72,21 @@ local PANEL_TITLES = {
 	trade      = "nav.trade",
 	fusion     = "nav.fusion",
 	rebirth    = "nav.rebirth",
-	gamepasses = "nav.gamepasses",
-	settings   = "nav.settings",
+	gamepasses   = "nav.gamepasses",
+	leaderboard  = "nav.leaderboard",
+	season       = "nav.season",
+	auctions     = "nav.auctions",
+	settings     = "nav.settings",
 }
 
 -- Panels mit eigener Größe (größer als Standard 820×560).
 local PANEL_SIZES: { [string]: UDim2 } = {
 	inventory  = UDim2.fromOffset(1100, 700),
 	gamepasses = UDim2.fromOffset(960, 640),
-	fusion     = UDim2.fromOffset(960, 640),
-	trade      = UDim2.fromOffset(960, 620),
+	fusion       = UDim2.fromOffset(960, 640),
+	trade        = UDim2.fromOffset(960, 620),
+	leaderboard  = UDim2.fromOffset(820, 620),
+	season       = UDim2.fromOffset(720, 600),
 }
 
 local function openPanel(id: string)
@@ -104,7 +114,7 @@ local function openPanel(id: string)
 	elseif id == "daily" then
 		DailyPanel.create(handle.body, snapshot)
 	elseif id == "rewards" then
-		StubPanel.create(handle.body, "Rewards", "Group join, codes & referral rewards arrive with Stage 10.")
+		RewardsPanel.create(handle.body, snapshot)
 	elseif id == "trade" then
 		TradePanel.create(handle.body, snapshot)
 	elseif id == "rebirth" then
@@ -113,6 +123,12 @@ local function openPanel(id: string)
 		FusionPanel.create(handle.body, snapshot)
 	elseif id == "gamepasses" then
 		GamepassPanel.create(handle.body, snapshot)
+	elseif id == "leaderboard" then
+		LeaderboardPanel.create(handle.body, snapshot)
+	elseif id == "season" then
+		SeasonPanel.create(handle.body, snapshot)
+	elseif id == "auctions" then
+		AuctionPanel.create(handle.body, snapshot)
 	end
 end
 
@@ -174,6 +190,9 @@ function UIController.start()
 
 	currencyBarApi = CurrencyBar.create(screen)
 	NavBar.create(screen, openPanel)
+
+	-- Leaderboard-Controller starten (OnSeasonUpdate Listener etc.)
+	LeaderboardController.start()
 
 	-- Trade-Controller starten + Invite-Popup + automatischer Trade-Panel-Open
 	TradeController.start()
@@ -339,6 +358,11 @@ function UIController.start()
 			snapshot.lifetime = profile.lifetime or { gold = 0, rebirths = 0 }
 			snapshot.divinity = profile.divinity or { spent = 0, tree = {} }
 			snapshot.quests = profile.quests or snapshot.quests
+			snapshot.season = profile.season or snapshot.season
+			-- Season-Snapshot an LeaderboardController weitergeben
+			if profile.season then
+				LeaderboardController.setSeasonData(profile.season)
+			end
 			currencyBarApi.update(snapshot.currencies)
 			-- Sprache aus Settings setzen
 			if snapshot.settings.language then

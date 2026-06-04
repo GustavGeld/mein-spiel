@@ -29,6 +29,15 @@ return {
 		PromptDevProduct = true,
 		DebugTogglePass = true,
 		DebugInventory = true,
+		RequestLeaderboard = true,
+		ClaimSeasonReward = true,
+		BuyPotion = true,
+		ClaimAchievement = true,
+		RedeemCode = true,
+		GetAuctions = true,
+		ListAuction = true,
+		BidAuction = true,
+		CancelListing = true,
 	} :: { [string]: boolean },
 
 	Events = {
@@ -44,5 +53,9 @@ return {
 		OnTradeUpdate = true,
 		OnAuctionUpdate = true,
 		OnGamepassUpdate = true,
+		OnSeasonUpdate = true,
+		OnPotionUpdate = true,
+		OnAchievementUpdate = true,
+		OnAuctionUpdate = true,
 	} :: { [string]: boolean },
 }

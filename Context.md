@@ -28,8 +28,8 @@
 | 6     | Fusion + server-wide Broadcasts        | DONE       |
 | 7     | Gamepasses + Dev Products + Skip Fast  | DONE       |
 | 8     | Trading (state machine + hold accept)  | DONE       |
-| 9     | Leaderboards + Seasons                 | NEXT       |
-| 10    | Auctions, Potions, Achievements, Codes | PENDING    |
+| 9     | Leaderboards + Seasons                 | DONE       |
+| 10    | Auctions, Potions, Achievements, Codes | DONE       |
 
 ---
 
@@ -168,17 +168,21 @@ Stable. Pack cinematic via `RollController`, multi-roll grid reveal, AutoRoll pe
 4. The skipFast gamepass also needs no further code — buying it auto-mirrors to
    `RollController.setSkipFast(true)` via OnGamepassUpdate.
 
-## Stage 9 plan (next)
+## Stage 9 (DONE) — Leaderboards + Seasons
 
-Leaderboards + Seasons:
-1. `src/server/services/LeaderboardService.luau`       NEW — OrderedDataStore writer (gold, rebirths, divinity, rarest, fusionRank, totalProduction)
-2. `src/server/services/SeasonService.luau`            NEW — season config, weekly cycle, top-100 reward distribution at season end
-3. `src/shared/config/Seasons.luau`                    NEW — season ids, durations, reward tables
-4. `src/client/controllers/LeaderboardController.luau` NEW — paginated fetch via remote
-5. `src/client/ui/panels/LeaderboardPanel.luau`        NEW — categories tab, top 100 list
-6. `src/client/ui/panels/SeasonPanel.luau`             NEW — current season progress + claim
-7. Hook PlayerDataService.OnSaved to write leaderboard entries
-8. New remotes: `RequestLeaderboard(category, page)`, `ClaimSeasonReward`
+1. `src/shared/config/Seasons.luau`                    NEW — Saison-ID (wochenbasiert), Score-Formel (pulls + rebirths×500), Reward-Tiers, formatTime
+2. `src/server/services/LeaderboardService.luau`       NEW — OrderedDataStore pro Kategorie (pulls/rebirths/gold/rarity/season); schreibt bei OnSaved/OnLoaded; RequestLeaderboard(cat,page) remote (20/Seite, max 100); Studio-Mock
+3. `src/server/services/SeasonService.luau`            NEW — Setzt season.id/claimed bei Saison-Reset; aktualisiert season.score bei jedem Save; ClaimSeasonReward prüft ODS-Rang, vergibt Gems; feuert OnSeasonUpdate
+4. `src/client/controllers/LeaderboardController.luau` NEW — fetchPage(cat,page), claimSeasonReward(), setzt seasonData, leitet OnSeasonUpdate weiter
+5. `src/client/ui/panels/LeaderboardPanel.luau`        NEW — 5 Kategorie-Tabs, paginierte Rangliste (20/Seite), lokaler Spieler goldfarbig hervorgehoben
+6. `src/client/ui/panels/SeasonPanel.luau`             NEW — Header (ID + Zeit), eigener Rang (async), Reward-Tier-Tabelle, Claim-Button
+7. Definitions.luau: + RequestLeaderboard, ClaimSeasonReward (Functions); + OnSeasonUpdate (Event)
+8. init.server.luau: + LeaderboardService, SeasonService nach TradeService
+9. UIController: + LeaderboardPanel/SeasonPanel require + wiring; + LeaderboardController.start(); Season-Snapshot nach RequestProfile
+10. NavBar: + leaderboard + season Tiles (13 Items, 7 Reihen)
+11. Icons: + leaderboard 🏆, season 🌀
+12. en.luau + de.luau: nav.leaderboard/season + alle leaderboard.*/season.* Keys
+13. PlayerDataService: RequestProfile lifetime-Snapshot um .pulls erweitert
 
 ## World interaction & temple display (2026-06-03)
 
@@ -204,9 +208,40 @@ Leaderboards + Seasons:
 Slots 4-6 are intentionally left unhandled until the Tempel model gets three
 additional Rahmen.
 
+## Stage 10 (DONE) — Auctions, Potions, Achievements, Codes, Weekly Quests
+
+1. DefaultProfile: + `achievements.claimed`, + `quests.weekStamp`
+2. `src/shared/config/Potions.luau` — 6 Tränke (luck/gold/faith/prod/offerings/autoRoll), Gems-Kosten, 10 min
+3. `src/shared/config/Achievements.luau` — 17 Meilensteine (pulls/rebirths/gold/collection/fusion/secrets)
+4. `src/server/data/Codes.luau` — 6 Einlösecodes (server-only)
+5. `src/server/services/PotionService.luau` — BuyPotion, in-memory Timer, getMultiplier, 30s Heartbeat
+6. `src/server/services/AchievementService.luau` — ClaimAchievement, Progress live aus Profil, OnAchievementUpdate
+7. `src/server/services/CodeService.luau` — RedeemCode (case-insensitive, idempotent via codesRedeemed)
+8. `src/server/services/AuctionService.luau` — ListAuction/BidAuction(Direktkauf)/CancelListing, 5% Steuer, 24h, GlobalDataStore
+9. QuestService: ensureWeeklies, bumpProgress für daily+weekly, onRebirth hook, ClaimQuest für beide Tabellen
+10. Quests.luau: weeklyPool (6 Quests), utcWeek(), pickWeeklies()
+11. RebirthService: onRebirth quest hook via lazy require
+12. EconomyService: getMultiplier nutzt jetzt PotionService (lazy require)
+13. Definitions.luau: + 7 neue Functions + 3 neue Events
+14. init.server.luau: + 4 neue Services, + 3 neue Remote-Stubs
+15. `src/client/ui/panels/RewardsPanel.luau` — 3 Tabs: Codes | Potions (Timer-UI) | Achievements (Progress+Claim)
+16. `src/client/ui/panels/AuctionPanel.luau` — Browse/MyListings Tabs, Kaufen+Stornieren, OnAuctionUpdate live
+17. QuestsPanel: Daily|Weekly Tab-Switcher (buildQuestList helper)
+18. UIController: + RewardsPanel/AuctionPanel require+wiring, StubPanel für rewards entfernt
+19. NavBar: + auctions Tile (15 Items, 8 Reihen)
+20. Icons: + auctions 🔨
+21. en.luau + de.luau: alle rewards.*/potion.*/ach.*/auction.*/quest.weekly* Keys
+
 ## Next session checklist
 - [ ] Read this file first.
-- [ ] Start Stage 9 Leaderboards + Seasons — files listed above.
+- [ ] Alle Systeme vollständig — Spiel ist feature-complete laut MainPrompt.
+- [ ] Optionale Aufgaben für Polishing-Pass:
+  - Offering-Random-Buffs implementieren (OfferingService, spending-Mechanic)
+  - Tutorial-Flow für neue Spieler (flags.tutorialDone = false)
+  - AFK-Produktion limitieren / "zurückkehren und sammeln"-Mechanic
+  - Mehr Götter-Assets (god PNGs) hochladen
+  - NavBar-Icons für neue Tabs hochladen
 - [ ] Add 3 more Rahmen to the Tempel model and extend
       `TempleDisplayController.MAX_SLOTS` to 6.
 - [ ] Confirm user uploaded any pending Robux gamepass IDs (if testing monetisation).
+- [ ] Optional: upload 🏆 Leaderboard and 🌀 Season NavBar-Icons → paste IDs in Icons.luau.

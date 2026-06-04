@@ -30,7 +30,10 @@ NavBar.items = {
 	{ id = "fusion",    labelKey = "nav.fusion",      icon = Icons.fusion    },
 	{ id = "rebirth",   labelKey = "nav.rebirth",     icon = Icons.rebirth   },
 	{ id = "gamepasses",labelKey = "nav.gamepasses",  icon = Icons.gamepasses},
-	{ id = "settings",  labelKey = "nav.settings",    icon = Icons.settings  },
+	{ id = "leaderboard", labelKey = "nav.leaderboard", icon = Icons.leaderboard },
+	{ id = "season",      labelKey = "nav.season",      icon = Icons.season      },
+	{ id = "auctions",    labelKey = "nav.auctions",    icon = Icons.auctions    },
+	{ id = "settings",    labelKey = "nav.settings",    icon = Icons.settings    },
 }
 
 local TILE        = 82

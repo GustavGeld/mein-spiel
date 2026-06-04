@@ -26,9 +26,13 @@ local function utcDay(): number
 	return math.floor(os.time() / 86400)
 end
 
--- Spielereigener RNG für Daily-Roll (deterministisch pro Tag+Spieler).
-local function rngFor(player: Player, day: number): Random
-	return Random.new(day * 1e6 + player.UserId)
+local function utcWeek(): number
+	return Quests.utcWeek()
+end
+
+-- Spielereigener RNG (deterministisch pro Zeitraum+Spieler).
+local function rngFor(player: Player, seed: number): Random
+	return Random.new(seed * 1e6 + player.UserId)
 end
 
 -- Stellt sicher, dass für den aktuellen Tag 3 Quests im Profile stehen.
@@ -43,6 +47,21 @@ local function ensureDailies(player: Player, profile)
 		profile.quests.daily[def.id] = { progress = 0, claimed = false }
 	end
 	profile.quests.dayStamp = today
+	return true
+end
+
+-- Stellt sicher, dass für die aktuelle Woche 3 Weekly-Quests stehen.
+local function ensureWeeklies(player: Player, profile)
+	local week = utcWeek()
+	if profile.quests.weekStamp == week and next(profile.quests.weekly) then
+		return false
+	end
+	local picks = Quests.pickWeeklies(rngFor(player, week + 9999), 3)
+	profile.quests.weekly = {}
+	for _, def in ipairs(picks) do
+		profile.quests.weekly[def.id] = { progress = 0, claimed = false }
+	end
+	profile.quests.weekStamp = week
 	return true
 end
 
@@ -69,21 +88,25 @@ local function giveReward(player: Player, reward)
 	EconomyService.add(player, reward.currency :: any, reward.amount)
 end
 
--- Bumpt Progress eines bestimmten Quest-Typs. Kein Auto-Claim (Spieler muss klicken).
+-- Bumpt Progress eines bestimmten Quest-Typs in daily UND weekly.
 local function bumpProgress(player: Player, qType: string, amount: number, param: number?)
 	local profile = PlayerDataService.get(player)
 	if not profile then return end
 	local changed = false
-	for id, state in pairs(profile.quests.daily) do
-		local def = Quests.byId[id]
-		if def and def.type == qType and not state.claimed then
-			if def.param == nil or (param ~= nil and param >= def.param) then
-				local before = state.progress
-				state.progress = math.min(def.target, state.progress + amount)
-				if state.progress ~= before then changed = true end
+	local function bump(questTable: any)
+		for id, state in pairs(questTable) do
+			local def = Quests.byId[id]
+			if def and def.type == qType and not state.claimed then
+				if def.param == nil or (param ~= nil and param >= def.param) then
+					local before = state.progress
+					state.progress = math.min(def.target, state.progress + amount)
+					if state.progress ~= before then changed = true end
+				end
 			end
 		end
 	end
+	bump(profile.quests.daily)
+	bump(profile.quests.weekly or {})
 	if changed then
 		PlayerDataService.patchQuests(player)
 	end
@@ -107,19 +130,29 @@ function QuestService.onGodPlaced(player: Player)
 	bumpProgress(player, "place", 1)
 end
 
+function QuestService.onRebirth(player: Player)
+	bumpProgress(player, "rebirths", 1)
+end
+
 -- ─── Remotes ─────────────────────────────────────────────────────────────────
 
 Net:Function("ClaimQuest").OnServerInvoke = function(player: Player, questId: any)
 	if type(questId) ~= "string" then return { ok = false, reason = "bad_args" } end
 	local profile = PlayerDataService.get(player)
 	if not profile then return { ok = false, reason = "no_profile" } end
-	local state = profile.quests.daily[questId]
+	-- Suche in daily UND weekly
+	local isWeekly = profile.quests.weekly and profile.quests.weekly[questId] ~= nil
+	local state = isWeekly and profile.quests.weekly[questId] or profile.quests.daily[questId]
 	local def = Quests.byId[questId]
 	if not state or not def then return { ok = false, reason = "unknown" } end
 	if state.claimed then return { ok = false, reason = "claimed" } end
 	if state.progress < def.target then return { ok = false, reason = "incomplete" } end
 	PlayerDataService.update(player, function(p)
-		p.quests.daily[questId].claimed = true
+		if isWeekly then
+			p.quests.weekly[questId].claimed = true
+		else
+			p.quests.daily[questId].claimed = true
+		end
 	end)
 	giveReward(player, def.reward)
 	PlayerDataService.patchQuests(player)
@@ -182,8 +215,9 @@ local function onJoin(player: Player)
 	local profile = PlayerDataService.get(player)
 	if not profile then return end
 	local rolled = ensureDailies(player, profile)
+	local rolledW = ensureWeeklies(player, profile)
 	local newLogin = bumpLoginStreak(profile)
-	if rolled or newLogin then
+	if rolled or rolledW or newLogin then
 		PlayerDataService.patchQuests(player)
 	end
 end

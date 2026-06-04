@@ -258,7 +258,7 @@ Net:Function("RequestProfile").OnServerInvoke = function(player: Player)
 	-- Geben dem Client einen reduzierten Snapshot (keine sensitiven Felder).
 	return {
 		currencies = profile.currencies,
-		lifetime = { gold = profile.lifetime.gold, rebirths = profile.lifetime.rebirths },
+		lifetime = { gold = profile.lifetime.gold, rebirths = profile.lifetime.rebirths, pulls = profile.lifetime.pulls },
 		inventory = { gods = profile.inventory.gods },
 		temple = profile.temple,
 		unlocks = { packs = profile.unlocks.packs, gamepasses = profile.unlocks.gamepasses },

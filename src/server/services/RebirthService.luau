@@ -74,6 +74,15 @@ Net:Function("RebirthConfirm").OnServerInvoke = function(player: Player)
 	Logger.info("%s rebirthed (+%d divinity, total %d rebirths)",
 		player.Name, gain, profile.lifetime.rebirths)
 
+	-- Weekly Quest-Hook: "Do a rebirth"
+	task.defer(function()
+		local s = script.Parent:FindFirstChild("QuestService")
+		if s then
+			local QS = require(s)
+			if QS and QS.onRebirth then QS.onRebirth(player) end
+		end
+	end)
+
 	return { ok = true, gain = gain, rebirths = profile.lifetime.rebirths }
 end
 

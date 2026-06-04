@@ -16,6 +16,11 @@ Net:Event("OnEconomyUpdate")
 Net:Event("OnInventoryUpdate")
 Net:Event("OnPullResult")
 Net:Event("OnBroadcast")
+Net:Event("OnLeaderboardUpdate")
+Net:Event("OnSeasonUpdate")
+Net:Event("OnPotionUpdate")
+Net:Event("OnAchievementUpdate")
+Net:Event("OnAuctionUpdate")
 
 Logger.info("Remote skeleton ready.")
 
@@ -55,7 +60,18 @@ Logger.info("GamepassService loaded.")
 local TradeService = require(script.services.TradeService)
 Logger.info("TradeService loaded.")
 
+-- Stage 9: Leaderboards + Seasons
+local LeaderboardService = require(script.services.LeaderboardService)
+local SeasonService = require(script.services.SeasonService)
+Logger.info("Leaderboard + Season services loaded.")
+
+-- Stage 10: Potions, Achievements, Codes, Auctions
+local PotionService = require(script.services.PotionService)
+local AchievementService = require(script.services.AchievementService)
+local _CodeService = require(script.services.CodeService)
+local _AuctionService = require(script.services.AuctionService)
+Logger.info("Potions + Achievements + Codes + Auctions loaded.")
+
 -- Test-/Admin-Chatbefehle (z. B. /money zum Geld geben)
 local CommandService = require(script.services.CommandService)
 Logger.info("CommandService loaded.")
--- TODO Stage 9: LeaderboardService, SeasonService

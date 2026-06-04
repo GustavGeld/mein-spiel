@@ -53,11 +53,12 @@ export type Profile = {
 		referrer: string?,
 		codesRedeemed: { [string]: boolean },
 	},
-	season:     { id: string, score: number, claimed: boolean },
-	collection: { discovered: { [string]: boolean } },
-	flags:      { tutorialDone: boolean, firstSecret: boolean },
-	pity:       { [string]: number }, -- per packId stored as string
-	meta:       { createdAt: number, lastLogin: number, playtime: number },
+	season:       { id: string, score: number, claimed: boolean },
+	collection:   { discovered: { [string]: boolean } },
+	achievements: { claimed: { [string]: boolean } },
+	flags:        { tutorialDone: boolean, firstSecret: boolean },
+	pity:         { [string]: number }, -- per packId stored as string
+	meta:         { createdAt: number, lastLogin: number, playtime: number },
 }
 
 local function default(): Profile
@@ -83,7 +84,7 @@ local function default(): Profile
 		},
 		quests     = {
 			daily = {}, weekly = {},
-			dayStamp = 0,
+			dayStamp = 0, weekStamp = 0,
 			minute = { lastClaim = 0 },
 			login = { streak = 0, lastDay = 0, claimed = false },
 		},
@@ -96,9 +97,10 @@ local function default(): Profile
 			sfx = true,
 		},
 		social     = { friendsBoost = true, referrer = nil, codesRedeemed = {} },
-		season     = { id = "S1", score = 0, claimed = false },
-		collection = { discovered = {} },
-		flags      = { tutorialDone = false, firstSecret = false },
+		season       = { id = "S1", score = 0, claimed = false },
+		collection   = { discovered = {} },
+		achievements = { claimed = {} },
+		flags        = { tutorialDone = false, firstSecret = false },
 		pity       = {},
 		meta       = { createdAt = 0, lastLogin = 0, playtime = 0 },
 	}

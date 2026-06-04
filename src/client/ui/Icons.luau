@@ -25,6 +25,10 @@ local Icons = {
 	gamepasses = icon("rbxassetid://0", "💎"),
 	settings  = icon("rbxassetid://93700586176429", "⚙"),
 
+	leaderboard = icon("rbxassetid://0", "🏆"),
+	season      = icon("rbxassetid://0", "🌀"),
+	auctions    = icon("rbxassetid://0", "🔨"),
+
 	-- Währungen / Sonstiges
 	gold      = icon("rbxassetid://0", "💵"),
 	faith     = icon("rbxassetid://0", "✨"),

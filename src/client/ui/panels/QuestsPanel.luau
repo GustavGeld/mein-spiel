@@ -148,7 +148,7 @@ local function makeQuestRow(parent: Instance, questId: string, state, onClaim: (
 	return refresh
 end
 
-function QuestsPanel.create(body: Instance, snapshot)
+local function buildQuestList(body: Instance, questTable: { [string]: any }, emptyMsg: string)
 	local scroller = Instance.new("ScrollingFrame")
 	scroller.BackgroundTransparency = 1
 	scroller.BorderSizePixel = 0
@@ -159,38 +159,21 @@ function QuestsPanel.create(body: Instance, snapshot)
 	scroller.Parent = body
 	Util.listLayout(scroller, Enum.FillDirection.Vertical, 8)
 
-	local title = Instance.new("TextLabel")
-	title.BackgroundTransparency = 1
-	title.Size = UDim2.new(1, 0, 0, 26)
-	title.Font = Theme.font.heading
-	title.TextSize = 18
-	title.TextColor3 = Theme.color.textPrimary
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.Text = Locale.t("quest.daily")
-	title.Parent = scroller
-
-	local quests = (snapshot.quests and snapshot.quests.daily) or {}
 	local refreshers: { () -> () } = {}
-
-	-- Sortiert nach: zuerst nicht-eingelöste & abgeschlossene, dann offene, dann eingelöste.
 	local ids = {}
-	for id in pairs(quests) do table.insert(ids, id) end
+	for id in pairs(questTable) do table.insert(ids, id) end
 	table.sort(ids, function(a, b)
-		local sa = quests[a]
-		local sb = quests[b]
+		local sa = questTable[a]; local sb = questTable[b]
 		local pa = sa.claimed and 2 or (sa.progress >= (Quests.byId[a] and Quests.byId[a].target or math.huge) and 0 or 1)
 		local pb = sb.claimed and 2 or (sb.progress >= (Quests.byId[b] and Quests.byId[b].target or math.huge) and 0 or 1)
 		return pa < pb
 	end)
-
 	for _, id in ipairs(ids) do
-		local r = makeQuestRow(scroller, id, quests[id], function()
-			-- Nach Claim Liste neu sortieren wäre möglich; wir refreshen einfach alle.
+		local r = makeQuestRow(scroller, id, questTable[id], function()
 			for _, f in ipairs(refreshers) do f() end
 		end)
 		table.insert(refreshers, r)
 	end
-
 	if #ids == 0 then
 		local empty = Instance.new("TextLabel")
 		empty.BackgroundTransparency = 1
@@ -198,9 +181,72 @@ function QuestsPanel.create(body: Instance, snapshot)
 		empty.Font = Theme.font.body
 		empty.TextSize = 14
 		empty.TextColor3 = Theme.color.textMuted
-		empty.Text = "No quests today — check back tomorrow."
+		empty.TextXAlignment = Enum.TextXAlignment.Center
+		empty.Text = emptyMsg
 		empty.Parent = scroller
 	end
+end
+
+function QuestsPanel.create(body: Instance, snapshot)
+	local activeTab = "daily"
+
+	-- Tab-Bar
+	local tabBar = Instance.new("Frame")
+	tabBar.BackgroundTransparency = 1
+	tabBar.Size = UDim2.new(1, 0, 0, 32)
+	tabBar.Parent = body
+	local tabList = Instance.new("UIListLayout")
+	tabList.FillDirection = Enum.FillDirection.Horizontal
+	tabList.SortOrder = Enum.SortOrder.LayoutOrder
+	tabList.Padding = UDim.new(0, 6)
+	tabList.Parent = tabBar
+
+	local content = Instance.new("Frame")
+	content.BackgroundTransparency = 1
+	content.Position = UDim2.fromOffset(0, 40)
+	content.Size = UDim2.new(1, 0, 1, -40)
+	content.Parent = body
+
+	local function switchTab(id: string)
+		activeTab = id
+		for _, child in ipairs(tabBar:GetChildren()) do
+			if child:IsA("TextButton") then child:Destroy() end
+		end
+		for i, tab in ipairs({ "daily", "weekly" }) do
+			local label = Locale.t("quest." .. tab)
+			local isActive = tab == id
+			local btn = Instance.new("TextButton")
+			btn.AutoButtonColor = false
+			btn.LayoutOrder = i
+			btn.Size = UDim2.new(0, 110, 1, 0)
+			btn.BackgroundColor3 = isActive and Theme.color.accent or Theme.color.panelLight
+			btn.BorderSizePixel = 0
+			btn.Font = isActive and Theme.font.bold or Theme.font.body
+			btn.TextColor3 = isActive and Color3.fromRGB(20,20,30) or Theme.color.textSecondary
+			btn.TextSize = 14
+			btn.Text = label
+			btn.Parent = tabBar
+			Util.corner(btn, Theme.radius.sm)
+			local capturedTab = tab
+			btn.Activated:Connect(function()
+				if activeTab ~= capturedTab then switchTab(capturedTab) end
+			end)
+		end
+		for _, child in ipairs(content:GetChildren()) do child:Destroy() end
+		local inner = Instance.new("Frame")
+		inner.BackgroundTransparency = 1
+		inner.Size = UDim2.fromScale(1, 1)
+		inner.Parent = content
+		if id == "daily" then
+			local q = (snapshot.quests and snapshot.quests.daily) or {}
+			buildQuestList(inner, q, "No quests today — check back tomorrow.")
+		else
+			local q = (snapshot.quests and snapshot.quests.weekly) or {}
+			buildQuestList(inner, q, Locale.t("quest.weeklyEmpty"))
+		end
+	end
+
+	switchTab("daily")
 end
 
 return QuestsPanel
