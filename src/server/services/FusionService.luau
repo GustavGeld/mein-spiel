@@ -16,9 +16,13 @@ local PlayerDataService = require(script.Parent.PlayerDataService)
 local InventoryService = require(script.Parent.InventoryService)
 local RateLimit = require(script.Parent.Parent.security.RateLimit)
 
--- Optional: BroadcastService für globale Notification bei hohen Rängen.
 local function tryGetBroadcast()
 	local s = script.Parent:FindFirstChild("BroadcastService")
+	return s and require(s) or nil
+end
+
+local function tryGetAnalytics()
+	local s = script.Parent:FindFirstChild("AnalyticsService")
 	return s and require(s) or nil
 end
 
@@ -76,6 +80,15 @@ Net:Function("Fuse").OnServerInvoke = function(player: Player, uids: any)
 	local roll = getRng(player):NextNumber()
 	local success = roll <= chance
 
+	-- Guardian ability: on failure, gods are not consumed
+	local hasGuardian = false
+	do
+		local p = PlayerDataService.get(player)
+		if p and p.companion and p.companion.abilities and p.companion.abilities["guardian"] then
+			hasGuardian = true
+		end
+	end
+
 	local survivor = entries[1]
 	local survivorUid = survivor.uid
 
@@ -85,6 +98,9 @@ Net:Function("Fuse").OnServerInvoke = function(player: Player, uids: any)
 		for _, e in ipairs(entries) do toRemove[e.uid] = true end
 		if success then
 			toRemove[survivorUid] = false
+		elseif hasGuardian then
+			-- Guardian: failure preserves all gods
+			toRemove = {}
 		end
 		-- Filter Inventar
 		local keep = {}
@@ -107,6 +123,15 @@ Net:Function("Fuse").OnServerInvoke = function(player: Player, uids: any)
 		newRank,
 		chance * 100)
 
+	-- Analytics
+	do
+		local AS = tryGetAnalytics()
+		if AS then
+			AS.track("fusion_attempted", { inputs = count })
+			if success then AS.track("fusion_success", { rank = newRank }) end
+		end
+	end
+
 	-- Broadcast bei seltenen high-rank Fusionen
 	if success and newRank >= 3 then
 		local Bc = tryGetBroadcast()
@@ -127,6 +152,7 @@ Net:Function("Fuse").OnServerInvoke = function(player: Player, uids: any)
 		chance = chance,
 		newRank = newRank,
 		survivorUid = success and survivorUid or nil,
+		guardianSaved = not success and hasGuardian or nil,
 	}
 end
 

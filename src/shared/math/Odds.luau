@@ -42,8 +42,9 @@ end
 
 local Odds = {}
 
--- pityState.count = Pulls ohne 4th-best+ in Folge, gespeichert pro PackTier.
-export type PityState = { [number]: number }
+-- pityState[packId] = Pulls ohne 4th-best+ in Folge.
+-- pityState["rare_"..packId] = Pulls ohne 3rd-best+ (Rare Pity).
+export type PityState = { [any]: number }
 
 -- Rollt einmal aus Pack `packId`.
 function Odds.roll(packId: number, rng: Random, pity: PityState, luckMul: number?, secretMul: number?): RollResult
@@ -67,15 +68,20 @@ function Odds.roll(packId: number, rng: Random, pity: PityState, luckMul: number
 		}
 	end
 
-	-- 2) Pity-Check: nach Threshold garantiere ≥ 4th-best
+	-- 2) Pity-Check: nach Threshold garantiere ≥ 4th-best (Epic Pity)
 	local pityCount = pity[packId] or 0
 	local threshold = Packs.pityThreshold(pack.id)
 	local forcePity = pityCount >= threshold
 
+	-- 2b) Rare Pity: nach 50 Pulls ohne ≥ 3rd-best → garantiere Slot 3+
+	local rarePityKey = "rare_" .. tostring(packId)
+	local rarePityCount = pity[rarePityKey] or 0
+	local RARE_PITY_THRESHOLD = 50
+	local forceRarePity = rarePityCount >= RARE_PITY_THRESHOLD
+
 	-- 3) Apply luck: erhöht Gewicht der besseren 3 Slots leicht
 	local weights = table.clone(pack.weightsPPM)
 	if luckMul ~= 1 then
-		-- Verschiebe Wahrscheinlichkeit von Slot 1 (worst) nach Slot 4 (epic).
 		local shift = math.floor(weights[1] * math.min(0.15, (luckMul - 1) * 0.5))
 		weights[1] -= shift
 		weights[4] += math.floor(shift * 0.75)
@@ -84,15 +90,24 @@ function Odds.roll(packId: number, rng: Random, pity: PityState, luckMul: number
 
 	local idx
 	if forcePity then
-		-- Nur Slot 4 oder 5 werfen
 		idx = weightedPick({ weights[4], weights[5] }, rng) + 3
 		pity[packId] = 0
+		pity[rarePityKey] = 0
+	elseif forceRarePity then
+		idx = weightedPick({ weights[3], weights[4], weights[5] }, rng) + 2
+		pity[rarePityKey] = 0
+		if idx >= 4 then pity[packId] = 0 else pity[packId] = pityCount + 1 end
 	else
 		idx = weightedPick(weights, rng)
 		if idx >= 4 then
 			pity[packId] = 0
+			pity[rarePityKey] = 0
+		elseif idx >= 3 then
+			pity[rarePityKey] = 0
+			pity[packId] = pityCount + 1
 		else
 			pity[packId] = pityCount + 1
+			pity[rarePityKey] = rarePityCount + 1
 		end
 	end
 

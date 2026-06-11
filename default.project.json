@@ -35,6 +35,9 @@
       },
       "Modelle": {
         "$path": "assets/Modelle/models.rbxm"
+      },
+      "test": {
+        "$path": "assets/test"
       }
     },
     "Lighting": {

@@ -31,6 +31,11 @@ local function tryGetBroadcast()
 	return sib and require(sib) or nil
 end
 
+local function tryGetAnalytics()
+	local sib = script.Parent:FindFirstChild("AnalyticsService")
+	return sib and require(sib) or nil
+end
+
 local PackService = {}
 
 -- Pro Spieler eigener kryptographisch initialisierter RNG.
@@ -46,10 +51,19 @@ end
 
 Players.PlayerRemoving:Connect(function(p) rngs[p] = nil end)
 
--- Pack-Preis: linear, Pack-spezifisch. Bei Bedarf später `priceCurveMul` einbeziehen.
+-- Pack-Preis: linear, Pack-spezifisch. FrenzyService discount applied if active.
 local function priceFor(packId: number): number
 	local pack = Packs.byId[packId]
-	return pack and pack.basePriceGold or math.huge
+	if not pack then return math.huge end
+	local base = pack.basePriceGold
+	local frenzyS = script.Parent:FindFirstChild("FrenzyService")
+	if frenzyS then
+		local FS = require(frenzyS) :: any
+		if FS and FS.getPriceMultiplier then
+			base = math.floor(base * FS.getPriceMultiplier())
+		end
+	end
+	return base
 end
 
 -- Pack unlock check.
@@ -87,6 +101,16 @@ local function applyPull(player: Player, packId: number, rarityId: string, isSec
 	local QuestService = tryGetQuestService()
 	if QuestService then
 		QuestService.onPull(player, rarityId, isSecret)
+	end
+
+	-- Analytics
+	do
+		local Analytics = tryGetAnalytics()
+		if Analytics then
+			Analytics.track("pack_opened", { packId = packId })
+			Analytics.track("rarity_rolled", { rarityId = rarityId })
+			if isSecret then Analytics.track("secret_pulled", {}) end
+		end
 	end
 
 	-- Broadcast bei Secret oder bestem Pack-Tier
@@ -213,6 +237,7 @@ Net:Function("OpenPack").OnServerInvoke = buyAndOpen
 
 PackService.buyAndOpen = buyAndOpen
 PackService.priceFor = priceFor
+PackService.openPacks = openPacks  -- für ClaimFreeRoll
 
 Logger.info("PackService online.")
 

@@ -40,8 +40,10 @@ local function tinted(c: Color3, mix: number): Color3
 	)
 end
 
--- Lesbarer Name: "Hermes_Apprentice" → "Hermes Apprentice"
 local function displayName(id: string): string
+	if Locale.has("god." .. id) then
+		return Locale.t("god." .. id)
+	end
 	return (string.gsub(id, "_", " "))
 end
 

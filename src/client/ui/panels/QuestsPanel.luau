@@ -239,7 +239,60 @@ function QuestsPanel.create(body: Instance, snapshot)
 		inner.Parent = content
 		if id == "daily" then
 			local q = (snapshot.quests and snapshot.quests.daily) or {}
-			buildQuestList(inner, q, "No quests today — check back tomorrow.")
+			-- Reroll button row
+			local rerollBar = Instance.new("Frame")
+			rerollBar.BackgroundTransparency = 1
+			rerollBar.Size = UDim2.new(1, 0, 0, 36)
+			rerollBar.Parent = inner
+
+			local rerollUsed = false
+			do
+				local today = math.floor(os.time() / 86400)
+				local rerollDay = snapshot.quests and snapshot.quests.rerollDay or 0
+				rerollUsed = rerollDay >= today
+			end
+
+			local rerollBtn = Instance.new("TextButton")
+			rerollBtn.AnchorPoint      = Vector2.new(1, 0.5)
+			rerollBtn.Position         = UDim2.new(1, 0, 0.5, 0)
+			rerollBtn.Size             = UDim2.fromOffset(160, 28)
+			rerollBtn.BorderSizePixel  = 0
+			rerollBtn.Font             = Theme.font.bold
+			rerollBtn.TextSize         = 13
+			rerollBtn.AutoButtonColor  = not rerollUsed
+			rerollBtn.BackgroundColor3 = rerollUsed and Theme.color.panel or Theme.color.accent
+			rerollBtn.TextColor3       = rerollUsed and Theme.color.textMuted or Color3.fromRGB(15, 20, 35)
+			rerollBtn.Text             = rerollUsed and Locale.t("quest.rerollUsed") or Locale.t("quest.reroll")
+			rerollBtn.Parent           = rerollBar
+			Util.corner(rerollBtn, Theme.radius.sm)
+
+			rerollBtn.Activated:Connect(function()
+				if rerollUsed then return end
+				rerollBtn.Text = "..."
+				rerollBtn.AutoButtonColor = false
+				local result = Net:Function("RerollQuest"):InvokeServer()
+				if result and result.ok then
+					rerollUsed = true
+					if snapshot.quests and snapshot.quests.daily then
+						snapshot.quests.daily[result.removedId] = nil
+						snapshot.quests.daily[result.newId] = { progress = 0, claimed = false }
+						if not snapshot.quests.rerollDay then snapshot.quests.rerollDay = 0 end
+						snapshot.quests.rerollDay = math.floor(os.time() / 86400)
+					end
+					-- Rebuild
+					switchTab("daily")
+				else
+					rerollBtn.Text = Locale.t("quest.rerollUsed")
+				end
+			end)
+
+			-- Quest list below the reroll bar
+			local listContainer = Instance.new("Frame")
+			listContainer.BackgroundTransparency = 1
+			listContainer.Position = UDim2.fromOffset(0, 40)
+			listContainer.Size = UDim2.new(1, 0, 1, -40)
+			listContainer.Parent = inner
+			buildQuestList(listContainer, q, "No quests today — check back tomorrow.")
 		else
 			local q = (snapshot.quests and snapshot.quests.weekly) or {}
 			buildQuestList(inner, q, Locale.t("quest.weeklyEmpty"))

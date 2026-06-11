@@ -27,7 +27,7 @@ local function loginCalendar(parent: Instance, snapshot, onClaim: () -> ()): () 
 	local box = Instance.new("Frame")
 	box.BackgroundColor3 = Theme.color.panelLight
 	box.BorderSizePixel = 0
-	box.Size = UDim2.new(1, 0, 0, 200)
+	box.Size = UDim2.new(1, 0, 0, 500)
 	box.Parent = parent
 	Util.corner(box, Theme.radius.md)
 	Util.padding(box, Theme.padding.md)
@@ -44,11 +44,11 @@ local function loginCalendar(parent: Instance, snapshot, onClaim: () -> ()): () 
 	local grid = Instance.new("Frame")
 	grid.BackgroundTransparency = 1
 	grid.Position = UDim2.fromOffset(0, 34)
-	grid.Size = UDim2.new(1, 0, 0, 108)
+	grid.Size = UDim2.new(1, 0, 0, 362)
 	grid.Parent = box
 	local layout = Instance.new("UIGridLayout")
-	layout.CellSize = UDim2.fromScale(1/7, 1)
-	layout.CellPadding = UDim2.fromOffset(6, 0)
+	layout.CellSize = UDim2.new(1/5, -5, 0, 56)
+	layout.CellPadding = UDim2.fromOffset(4, 4)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = grid
 
@@ -77,9 +77,9 @@ local function loginCalendar(parent: Instance, snapshot, onClaim: () -> ()): () 
 
 		local dayLbl = Instance.new("TextLabel")
 		dayLbl.BackgroundTransparency = 1
-		dayLbl.Size = UDim2.new(1, 0, 0, 22)
+		dayLbl.Size = UDim2.new(1, 0, 0, 14)
 		dayLbl.Font = Theme.font.bold
-		dayLbl.TextSize = 12
+		dayLbl.TextSize = 10
 		dayLbl.TextColor3 = Theme.color.textSecondary
 		dayLbl.Text = string.format(Locale.t("daily.next"), i)
 		dayLbl.Parent = cell
@@ -87,10 +87,10 @@ local function loginCalendar(parent: Instance, snapshot, onClaim: () -> ()): () 
 		local symLbl = Instance.new("TextLabel")
 		symLbl.BackgroundTransparency = 1
 		symLbl.AnchorPoint = Vector2.new(0.5, 0.5)
-		symLbl.Position = UDim2.fromScale(0.5, 0.55)
-		symLbl.Size = UDim2.new(1, -8, 0, 36)
+		symLbl.Position = UDim2.fromScale(0.5, 0.60)
+		symLbl.Size = UDim2.new(1, -4, 0, 28)
 		symLbl.Font = Theme.font.heading
-		symLbl.TextSize = 16
+		symLbl.TextSize = 13
 		local sym, col = rewardSymbol(Quests.loginRewards[i])
 		symLbl.Text = sym
 		symLbl.TextColor3 = col
@@ -219,6 +219,101 @@ local function minuteCard(parent: Instance, snapshot, onClaim: () -> ()): () -> 
 	return refresh
 end
 
+-- ─── Free Daily Roll Card ────────────────────────────────────────────────────
+
+local function freeRollCard(parent: Instance, snapshot, onClaim: () -> ())
+	local box = Instance.new("Frame")
+	box.BackgroundColor3 = Color3.fromRGB(20, 40, 28)
+	box.BorderSizePixel = 0
+	box.Size = UDim2.new(1, 0, 0, 72)
+	box.Parent = parent
+	Util.corner(box, Theme.radius.md)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(90, 220, 90)
+	stroke.Thickness = 2
+	stroke.Parent = box
+
+	local lbl = Instance.new("TextLabel")
+	lbl.BackgroundTransparency = 1
+	lbl.Position = UDim2.fromOffset(16, 0)
+	lbl.Size = UDim2.new(0.6, 0, 1, 0)
+	lbl.Font = Theme.font.bold
+	lbl.TextSize = 16
+	lbl.TextColor3 = Theme.color.textPrimary
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Text = Locale.t("daily.freeRoll")
+	lbl.Parent = box
+
+	local subLbl = Instance.new("TextLabel")
+	subLbl.BackgroundTransparency = 1
+	subLbl.Position = UDim2.fromOffset(16, 30)
+	subLbl.Size = UDim2.new(0.6, 0, 0, 22)
+	subLbl.Font = Theme.font.body
+	subLbl.TextSize = 12
+	subLbl.TextColor3 = Theme.color.textSecondary
+	subLbl.TextXAlignment = Enum.TextXAlignment.Left
+	subLbl.Text = Locale.t("daily.freeRollDesc")
+	subLbl.Parent = box
+
+	local btn = Util.button(Locale.t("daily.freeRollBtn"), Color3.fromRGB(80, 200, 100))
+	btn.AnchorPoint = Vector2.new(1, 0.5)
+	btn.Position = UDim2.new(1, -12, 0.5, 0)
+	btn.Size = UDim2.fromOffset(120, 36)
+	btn.TextColor3 = Color3.fromRGB(20, 20, 30)
+	btn.Parent = box
+
+	-- Prüfe ob heute schon geclaimed
+	local function refresh()
+		local today = math.floor(os.time() / 86400)
+		local freeRoll = snapshot.quests and snapshot.quests.freeRoll
+		local lastDay = freeRoll and freeRoll.lastDay or 0
+		if lastDay == today then
+			btn.Text = Locale.t("daily.freeRollClaimed")
+			btn.AutoButtonColor = false
+			btn.BackgroundColor3 = Theme.color.locked
+		else
+			btn.Text = Locale.t("daily.freeRollBtn")
+			btn.AutoButtonColor = true
+			btn.BackgroundColor3 = Color3.fromRGB(80, 200, 100)
+		end
+	end
+
+	btn.Activated:Connect(function()
+		local today = math.floor(os.time() / 86400)
+		local freeRoll = snapshot.quests and snapshot.quests.freeRoll
+		if freeRoll and freeRoll.lastDay == today then return end
+
+		btn.Text = "…"
+		btn.AutoButtonColor = false
+		local ok, result = pcall(function()
+			return Net:Function("ClaimFreeRoll"):InvokeServer()
+		end)
+		if ok and result and result.ok then
+			-- Snapshot updaten
+			if snapshot.quests then
+				snapshot.quests.freeRoll = snapshot.quests.freeRoll or { lastDay = 0 }
+				snapshot.quests.freeRoll.lastDay = today
+			end
+			-- Pull-Ergebnis direkt triggern (gleich wie OpenPack)
+			if result.results and #result.results > 0 then
+				local pullEvt = Net:Event("OnPullResult")
+				-- Client-seitig → wir feuern das Event simuliert (via RemoteEvent vom Server)
+				-- Der Server hat bereits OnInventoryUpdate gesendet; kurze Toast-Meldung zeigen
+				btn.Text = "✓ " .. (result.results[1] and result.results[1].rarityId or "?")
+				btn.BackgroundColor3 = Theme.color.success
+			else
+				btn.Text = Locale.t("daily.freeRollClaimed")
+				btn.BackgroundColor3 = Theme.color.locked
+			end
+			onClaim()
+		else
+			refresh()
+		end
+	end)
+
+	refresh()
+end
+
 function DailyPanel.create(body: Instance, snapshot)
 	local list = Instance.new("Frame")
 	list.BackgroundTransparency = 1
@@ -231,6 +326,7 @@ function DailyPanel.create(body: Instance, snapshot)
 
 	refreshLogin = loginCalendar(list, snapshot, function() refreshLogin() end)
 	refreshMinute = minuteCard(list, snapshot, function() refreshMinute() end)
+	freeRollCard(list, snapshot, function() end)
 end
 
 return DailyPanel

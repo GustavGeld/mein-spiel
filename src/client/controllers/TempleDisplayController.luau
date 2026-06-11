@@ -1,7 +1,4 @@
 --!strict
--- TempleDisplayController — zeigt die equippten Götter des Local-Players auf
--- den Rahmen des Tempel-Modells (Slots 1-3).
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -17,8 +14,9 @@ local TempleDisplayController = {}
 
 local MAX_SLOTS = 3
 
-local STATS_SIZE   = Vector3.new(6.2, 2.2, 0.3)
-local STATS_BELOW  = 3.6
+local STATS_SIZE   = Vector3.new(6.4, 2.4, 0.2)
+local STATS_BELOW  = 3.8    -- Studs unter Anchor-Mittelpunkt
+local STATS_ABOVE  = 3.8    -- Studs über Anchor-Mittelpunkt (Pending-Anzeige)
 local FLOAT_AMPL   = 0.18
 local FLOAT_FREQ   = 1.4
 
@@ -35,18 +33,23 @@ type SlotView = {
 	anchorPart: BasePart,
 	picturePart: BasePart,
 	statsPart: BasePart,
+	pendingPart: BasePart,
 	phase: number,
 	pictureFaces: { FaceLabels },
 	statsFaces: { FaceLabels },
+	pendingFaces: { FaceLabels },
 }
 
 local snapshot = {
 	templeSlots = {} :: { { godUid: string? } },
 	gods = {} :: { any },
+	pending = {} :: { [string]: { gold: number, faith: number } },
 }
 
-local slotViews: { [number]: SlotView } = {}
+local slotViews: { SlotView } = {}
 local heartbeatConn: RBXScriptConnection? = nil
+local tempelCenterPos = Vector3.new(0, 0, 0)
+local tempelLookDir = Vector3.new(0, 0, -1) -- Speichert die exakte Ausrichtung des Tempels
 
 local function findTempel(): Model?
 	local modelle = Workspace:FindFirstChild("Modelle")
@@ -55,31 +58,24 @@ local function findTempel(): Model?
 	return (t and t:IsA("Model")) and (t :: Model) or nil
 end
 
--- FIX 1: Holt gezielt die einzelne Bildfläche aus jedem Rahmen-Modell
-local function getRahmen(tempel: Model): { BasePart }
+local function getRahmenAnchors(tempel: Model): { BasePart }
 	local out: { BasePart } = {}
-	
-	for _, child in ipairs(tempel:GetChildren()) do
-		if child.Name == "Rahmen" then
-			local bildflache = child:FindFirstChild("Rahmen_Doppelseitige_Bildflache")
-			if bildflache and bildflache:IsA("BasePart") then
-				table.insert(out, bildflache)
-			end
+	for _, desc in ipairs(tempel:GetDescendants()) do
+		if desc:IsA("BasePart") and desc.Name == "Rahmen_Doppelseitige_Bildflache" then
+			table.insert(out, desc)
 		end
 	end
-
-	-- Sortiert von links nach rechts nach X-Koordinate
 	table.sort(out, function(a: BasePart, b: BasePart)
-		return a.Position.X < b.Position.X
+		return a.Position.Z < b.Position.Z
 	end)
 	return out
 end
 
-local function makeCanvasPart(name: string, parent: Instance, size: Vector3, transparent: boolean, anchored: boolean): Part
+local function makeCanvasPart(name: string, parent: Instance, size: Vector3, transparent: boolean): Part
 	local p = Instance.new("Part")
 	p.Name = name
 	p.Size = size
-	p.Anchored = anchored
+	p.Anchored = true
 	p.CanCollide = false
 	p.CanTouch = false
 	p.CanQuery = false
@@ -139,15 +135,10 @@ local function buildPictureFace(parent: BasePart, face: Enum.NormalId): FaceLabe
 	picture.Image = ""
 	picture.Parent = bg
 
-	local result: FaceLabels = {
-		bg = bg, 
-		picture = picture, 
-		glow = glow,
-		nameLbl = nil, 
-		rarityLbl = nil, 
-		lineLbl = nil,
+	return {
+		bg = bg, picture = picture, glow = glow,
+		nameLbl = nil, rarityLbl = nil, lineLbl = nil,
 	}
-	return result
 end
 
 local function buildStatsFace(parent: BasePart, face: Enum.NormalId): FaceLabels
@@ -171,13 +162,13 @@ local function buildStatsFace(parent: BasePart, face: Enum.NormalId): FaceLabels
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	list.VerticalAlignment = Enum.VerticalAlignment.Center
-	list.Padding = UDim.new(0, 6)
+	list.Padding = UDim.new(0, 12)
 	list.Parent = bg
 
 	local function makeLabel(layoutOrder: number, textSize: number, font: Enum.Font): TextLabel
 		local lbl = Instance.new("TextLabel")
 		lbl.BackgroundTransparency = 1
-		lbl.Size = UDim2.new(1, 0, 0, textSize + 6)
+		lbl.Size = UDim2.new(1, 0, 0, textSize + 12)
 		lbl.Font = font
 		lbl.TextSize = textSize
 		lbl.TextColor3 = Color3.fromRGB(255, 250, 230)
@@ -190,55 +181,46 @@ local function buildStatsFace(parent: BasePart, face: Enum.NormalId): FaceLabels
 		local s = Instance.new("UIStroke")
 		s.Name = "Glow"
 		s.Color = Color3.fromRGB(255, 200, 60)
-		s.Thickness = 2
+		s.Thickness = 3.5
 		s.Transparency = 0.1
 		s.Parent = lbl
 		return lbl
 	end
 
-	local result: FaceLabels = {
-		bg = bg, 
-		picture = nil, 
-		glow = nil,
-		nameLbl   = makeLabel(1, 44, Enum.Font.GothamBlack) :: any,
-		rarityLbl = makeLabel(2, 26, Enum.Font.GothamBold) :: any,
-		lineLbl   = makeLabel(3, 24, Enum.Font.Gotham) :: any,
+	return {
+		bg = bg, picture = nil, glow = nil,
+		nameLbl   = makeLabel(1, 88, Enum.Font.GothamBlack),
+		rarityLbl = makeLabel(2, 52, Enum.Font.GothamBold),
+		lineLbl   = makeLabel(3, 48, Enum.Font.Gotham),
 	}
-	return result
 end
 
--- FIX 2: Erzeugt ein unanchored Hilfs-Part für die Bilder und schweißt es an das Mesh
 local function buildSlot(anchor: BasePart, slotIndex: number)
 	if anchor:GetAttribute("__TempleDisplayBuilt") then return end
 	anchor:SetAttribute("__TempleDisplayBuilt", true)
 
-	-- Passt sich dynamisch an die Mesh-Größe an, fügt minimale Dicke hinzu
-	local pSize = Vector3.new(anchor.Size.X, anchor.Size.Y, 0.15)
-	local picturePart = makeCanvasPart("PictureCanvas_" .. slotIndex, anchor, pSize, false, false)
-	picturePart.CFrame = anchor.CFrame
-	
-	local pw = Instance.new("WeldConstraint")
-	pw.Part0 = anchor
-	pw.Part1 = picturePart
-	pw.Parent = picturePart
+	local pSize = Vector3.new(anchor.Size.X * 0.98, anchor.Size.Y * 0.98, 0.3)
+	local picturePart = makeCanvasPart("PictureCanvas_" .. slotIndex, Workspace, pSize, false)
+	local statsPart   = makeCanvasPart("StatsCanvas_" .. slotIndex, Workspace, STATS_SIZE, true)
+	local pendingPart = makeCanvasPart("PendingCanvas_" .. slotIndex, Workspace, STATS_SIZE, true)
 
 	local pictureFront = buildPictureFace(picturePart, Enum.NormalId.Front)
 	local pictureBack  = buildPictureFace(picturePart, Enum.NormalId.Back)
+	local statsFront   = buildStatsFace(statsPart,   Enum.NormalId.Front)
+	local statsBack    = buildStatsFace(statsPart,   Enum.NormalId.Back)
+	local pendingFront = buildStatsFace(pendingPart, Enum.NormalId.Front)
+	local pendingBack  = buildStatsFace(pendingPart, Enum.NormalId.Back)
 
-	-- Stats-Schilder (bleiben zwecks Live-Ausrichtung auf Anchored = true)
-	local statsPart = makeCanvasPart("StatsCanvas_" .. slotIndex, anchor, STATS_SIZE, true, true)
-
-	local statsFront = buildStatsFace(statsPart, Enum.NormalId.Front)
-	local statsBack  = buildStatsFace(statsPart, Enum.NormalId.Back)
-
-	slotViews[slotIndex] = {
+	table.insert(slotViews, {
 		anchorPart    = anchor,
 		picturePart   = picturePart,
 		statsPart     = statsPart,
+		pendingPart   = pendingPart,
 		phase         = slotIndex * 0.7,
 		pictureFaces  = { pictureFront, pictureBack },
 		statsFaces    = { statsFront, statsBack },
-	}
+		pendingFaces  = { pendingFront, pendingBack },
+	})
 end
 
 local function findGodByUid(uid: string?): any?
@@ -273,19 +255,13 @@ local function refreshSlot(i: number)
 
 	local imageId = (def and def.iconAssetId) or ""
 	local rColor = (rDef and rDef.color) or Color3.fromRGB(90, 90, 110)
-	local rText = rarityName(rDef)
-	local nameTxt = entry and prettifyName(entry.id) or ""
-	local prod = (def and def.baseProduction) or 0
-	local faith = (def and def.baseFaith) or 0
-	local rank = (entry and entry.fusionRank) or 0
-	local rankSuffix = rank > 0 and ("  ★+" .. rank) or ""
-
 	local glowColor = Color3.new(
 		math.min(rColor.R * 1.1 + 0.15, 1),
 		math.min(rColor.G * 1.1 + 0.15, 1),
 		math.min(rColor.B * 1.1 + 0.15, 1)
 	)
 
+	-- BILDER UPDATEN
 	for _, face in ipairs(view.pictureFaces) do
 		face.bg.BackgroundColor3 = rColor
 		if face.glow then face.glow.ImageColor3 = glowColor end
@@ -303,18 +279,20 @@ local function refreshSlot(i: number)
 		end
 	end
 
+	-- STATS UPDATEN
 	for _, face in ipairs(view.statsFaces) do
-		if entry and face.nameLbl and face.rarityLbl and face.lineLbl then
-			face.nameLbl.Text   = nameTxt .. rankSuffix
-			face.rarityLbl.Text = rText
+		if entry and def and face.nameLbl and face.rarityLbl and face.lineLbl then
+			face.nameLbl.Text   = prettifyName(entry.id) .. (entry.fusionRank > 0 and ("  ★+" .. entry.fusionRank) or "")
+			face.rarityLbl.Text = rarityName(rDef)
 			face.lineLbl.Text   = string.format(
-				"<font color=\"rgb(255,210,90)\">%d</font> Gold/s · <font color=\"rgb(170,210,255)\">%d</font> Faith/s",
-				prod, faith
+				"<font color=\"rgb(255,210,90)\">%d</font> Gold/s · <font color=\"rgb(170,210,255)\">%d</font> Faith/s", 
+				def.baseProduction or 0, 
+				def.baseFaith or 0
 			)
 		elseif face.nameLbl and face.rarityLbl and face.lineLbl then
-			face.nameLbl.Text   = ""
-			face.rarityLbl.Text = ""
-			face.lineLbl.Text   = ""
+			face.nameLbl.Text   = "Leerer Slot"
+			face.rarityLbl.Text = "-"
+			face.lineLbl.Text   = "0 Gold/s · 0 Faith/s"
 		end
 
 		if face.rarityLbl then face.rarityLbl.TextColor3 = rColor end
@@ -323,46 +301,96 @@ local function refreshSlot(i: number)
 		for _, lbl in ipairs(labels) do
 			if lbl then
 				local stroke = lbl:FindFirstChild("Glow")
-				if stroke and stroke:IsA("UIStroke") then
-					stroke.Color = glowColor
-				end
+				if stroke and stroke:IsA("UIStroke") then stroke.Color = glowColor end
 			end
+		end
+	end
+
+	-- ── PENDING ÜBER DEM RAHMEN: aktuell gesammeltes Gold / Faith ─────────
+	local pendingData = snapshot.pending[tostring(i)] or { gold = 0, faith = 0 }
+	local pGold  = math.floor(pendingData.gold  or 0)
+	local pFaith = math.floor(pendingData.faith or 0)
+
+	local function fmtNum(n: number): string
+		if n >= 1e9 then return string.format("%.1fB", n/1e9)
+		elseif n >= 1e6 then return string.format("%.1fM", n/1e6)
+		elseif n >= 1e3 then return string.format("%.1fk", n/1e3)
+		else return tostring(n) end
+	end
+
+	local GOLD_ORB_COLOR  = Color3.fromRGB(120, 230, 90)
+	local FAITH_ORB_COLOR = Color3.fromRGB(255, 170, 70)
+
+	for _, face in ipairs(view.pendingFaces) do
+		if face.nameLbl and face.rarityLbl and face.lineLbl then
+			-- Header oben
+			face.nameLbl.Text = "✦ PENDING ✦"
+			face.nameLbl.TextColor3 = Color3.fromRGB(245, 245, 250)
+			-- Gold (grün, große Zahl)
+			face.rarityLbl.Text = "🪙 " .. fmtNum(pGold)
+			face.rarityLbl.TextColor3 = GOLD_ORB_COLOR
+			-- Faith (orange, große Zahl)
+			face.lineLbl.Text = "✨ " .. fmtNum(pFaith)
+			face.lineLbl.TextColor3 = FAITH_ORB_COLOR
+
+			-- Strokes farblich anpassen
+			local goldStroke = face.rarityLbl:FindFirstChild("Glow")
+			if goldStroke and goldStroke:IsA("UIStroke") then
+				goldStroke.Color = GOLD_ORB_COLOR
+			end
+			local faithStroke = face.lineLbl:FindFirstChild("Glow")
+			if faithStroke and faithStroke:IsA("UIStroke") then
+				faithStroke.Color = FAITH_ORB_COLOR
+			end
+			local headerStroke = face.nameLbl:FindFirstChild("Glow")
+			if headerStroke and headerStroke:IsA("UIStroke") then
+				headerStroke.Color = Color3.fromRGB(200, 200, 220)
+			end
+
+			-- Wenn pending = 0 AND kein god platziert: alles ausblenden
+			local hasGod = entry ~= nil
+			local hasPending = pGold > 0 or pFaith > 0
+			view.pendingPart.Transparency = (hasGod or hasPending) and 1 or 1 -- transparent immer
+			-- Labels nur sichtbar wenn was zu zeigen
+			face.nameLbl.TextTransparency  = (hasGod or hasPending) and 0 or 1
+			face.rarityLbl.TextTransparency = (hasGod or hasPending) and 0 or 1
+			face.lineLbl.TextTransparency   = (hasGod or hasPending) and 0 or 1
 		end
 	end
 end
 
 local function refreshAll()
-	for i = 1, MAX_SLOTS do
-		refreshSlot(i)
-	end
+	for i = 1, #slotViews do refreshSlot(i) end
 end
 
--- FIX 3: Hält die schwebenden Stats unter den beweglichen Rahmen immer absolut waagerecht
-local function startFloat()
+local function startHeartbeat()
 	if heartbeatConn then return end
 	heartbeatConn = RunService.Heartbeat:Connect(function()
 		local t = os.clock()
-		for _, view in pairs(slotViews) do
+		for _, view in ipairs(slotViews) do
 			local anchor = view.anchorPart
-			if anchor and view.statsPart then
-				local yHalf = anchor.Size.Y * 0.5
-				local anchorCF = anchor.CFrame
-				
-				-- Filtert unerwünschte Neigungen (Pitch/Roll) heraus
-				local pos = anchorCF.Position - Vector3.new(0, yHalf + STATS_BELOW, 0)
-				local look = anchorCF.LookVector
-				local lookXZ = Vector3.new(look.X, 0, look.Z)
-				if lookXZ.Magnitude < 0.001 then
-					lookXZ = Vector3.new(0, 0, -1)
-				else
-					lookXZ = lookXZ.Unit
-				end
-				
-				local uprightBaseCF = CFrame.lookAt(pos, pos + lookXZ)
-				local yOffset = math.sin(t * FLOAT_FREQ + view.phase) * FLOAT_AMPL
-				
-				view.statsPart.CFrame = uprightBaseCF * CFrame.new(0, yOffset, 0)
-			end
+			if not anchor or not anchor.Parent then continue end
+
+			view.picturePart.CFrame = anchor.CFrame
+
+			local yHalf = anchor.Size.Y * 0.5
+			-- Stats UNTER dem Rahmen (Name + Rarity + Production)
+			local belowY = anchor.Position.Y - (yHalf + STATS_BELOW)
+			local belowPos = Vector3.new(anchor.Position.X, belowY, anchor.Position.Z)
+			local belowOffset = math.sin(t * FLOAT_FREQ + view.phase) * FLOAT_AMPL
+			view.statsPart.CFrame = CFrame.lookAt(
+				belowPos + Vector3.new(0, belowOffset, 0),
+				belowPos + Vector3.new(0, belowOffset, 0) + tempelLookDir
+			)
+
+			-- Pending ÜBER dem Rahmen (Gold + Faith pending, antiparallel float)
+			local aboveY = anchor.Position.Y + (yHalf + STATS_ABOVE)
+			local abovePos = Vector3.new(anchor.Position.X, aboveY, anchor.Position.Z)
+			local aboveOffset = math.sin(t * FLOAT_FREQ + view.phase + math.pi) * FLOAT_AMPL
+			view.pendingPart.CFrame = CFrame.lookAt(
+				abovePos + Vector3.new(0, aboveOffset, 0),
+				abovePos + Vector3.new(0, aboveOffset, 0) + tempelLookDir
+			)
 		end
 	end)
 end
@@ -370,12 +398,25 @@ end
 local function buildViews()
 	local tempel = findTempel()
 	if not tempel then return end
-	local bildflachen = getRahmen(tempel)
-	for i = 1, math.min(MAX_SLOTS, #bildflachen) do
-		buildSlot(bildflachen[i], i)
+
+	local anchors = getRahmenAnchors(tempel)
+	local verzoegerung = 0
+	while #anchors < MAX_SLOTS and verzoegerung < 10 do
+		task.wait(0.5)
+		anchors = getRahmenAnchors(tempel)
+		verzoegerung = verzoegerung + 1
+	end
+
+	-- Ermittelt die exakte Blickrichtung & Position des Tempels
+	local tempelPivot = tempel:GetPivot()
+	tempelCenterPos = tempelPivot.Position
+	tempelLookDir = Vector3.new(tempelPivot.LookVector.X, 0, tempelPivot.LookVector.Z).Unit
+
+	for i = 1, math.min(MAX_SLOTS, #anchors) do
+		buildSlot(anchors[i], i)
 	end
 	refreshAll()
-	startFloat()
+	startHeartbeat()
 end
 
 function TempleDisplayController.start()
@@ -383,6 +424,7 @@ function TempleDisplayController.start()
 
 	Net:Event("OnTempleUpdate").OnClientEvent:Connect(function(temple)
 		snapshot.templeSlots = (temple and temple.slots) or {}
+		snapshot.pending     = (temple and temple.pending) or {}
 		refreshAll()
 	end)
 	Net:Event("OnInventoryUpdate").OnClientEvent:Connect(function(inv)
@@ -392,12 +434,11 @@ function TempleDisplayController.start()
 	Locale.LanguageChanged:Connect(refreshAll)
 
 	task.spawn(function()
-		local ok, profile = pcall(function()
-			return Net:Function("RequestProfile"):InvokeServer()
-		end)
+		local ok, profile = pcall(function() return Net:Function("RequestProfile"):InvokeServer() end)
 		if ok and type(profile) == "table" then
 			snapshot.templeSlots = (profile.temple and profile.temple.slots) or snapshot.templeSlots
-			snapshot.gods = (profile.inventory and profile.inventory.gods) or snapshot.gods
+			snapshot.gods        = (profile.inventory and profile.inventory.gods) or snapshot.gods
+			snapshot.pending     = (profile.temple and profile.temple.pending) or snapshot.pending
 			refreshAll()
 		end
 	end)
@@ -413,8 +454,10 @@ function TempleDisplayController.start()
 			end
 		end)
 	end
-
-	local _ = Players
 end
+
+task.spawn(function()
+	TempleDisplayController.start()
+end)
 
 return TempleDisplayController

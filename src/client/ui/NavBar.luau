@@ -18,10 +18,12 @@ export type NavItem = {
 }
 
 local NavBar = {}
+NavBar._labels = {} :: { [string]: TextLabel }  -- Label-Referenzen für Live-Übersetzung
 
 NavBar.items = {
 	{ id = "shop",      labelKey = "nav.shop",        icon = Icons.shop      },
 	{ id = "inventory", labelKey = "nav.inventory",   icon = Icons.inventory },
+	{ id = "temple",    labelKey = "nav.temple",      icon = Icons.temple    },
 	{ id = "index",     labelKey = "nav.collection",  icon = Icons.index     },
 	{ id = "quests",    labelKey = "nav.quests",      icon = Icons.quests    },
 	{ id = "daily",     labelKey = "nav.daily",       icon = Icons.daily     },
@@ -33,7 +35,7 @@ NavBar.items = {
 	{ id = "leaderboard", labelKey = "nav.leaderboard", icon = Icons.leaderboard },
 	{ id = "season",      labelKey = "nav.season",      icon = Icons.season      },
 	{ id = "auctions",    labelKey = "nav.auctions",    icon = Icons.auctions    },
-	{ id = "settings",    labelKey = "nav.settings",    icon = Icons.settings    },
+	-- Settings entfernt — eigener ⚙ Button rechts oben (UIController)
 }
 
 local TILE        = 82
@@ -56,7 +58,6 @@ function NavBar.create(parent: Instance, onTabSelected: (id: string) -> ()): Fra
 
 	local frame = Instance.new("Frame")
 	frame.Name = "NavBar"
-	-- Vertikal mittig auf der linken Seite — fühlt sich balancierter an als ganz unten.
 	frame.AnchorPoint = Vector2.new(0, 0.5)
 	frame.Position = UDim2.new(0, 18, 0.5, 0)
 	frame.Size = UDim2.fromOffset(width, height)
@@ -129,7 +130,20 @@ function NavBar.create(parent: Instance, onTabSelected: (id: string) -> ()): Fra
 			TweenService:Create(btn, hoverTI, { BackgroundColor3 = TILE_FILL }):Play()
 		end)
 		btn.Activated:Connect(function() onTabSelected(item.id) end)
+
+		-- Label-Referenz für Sprach-Live-Update speichern
+		NavBar._labels[item.id] = label
 	end
+
+	-- Sprache live aktualisieren wenn sie sich ändert
+	Locale.LanguageChanged:Connect(function()
+		for _, item in ipairs(NavBar.items) do
+			local lbl = NavBar._labels[item.id]
+			if lbl and lbl.Parent then
+				lbl.Text = Locale.t(item.labelKey)
+			end
+		end
+	end)
 
 	return frame
 end

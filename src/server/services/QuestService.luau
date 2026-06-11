@@ -194,6 +194,75 @@ Net:Function("ClaimLogin").OnServerInvoke = function(player: Player)
 	return { ok = true, reward = reward, streak = streak }
 end
 
+-- Täglicher Gratis-Roll (Pack 1, eine Ziehung)
+Net:Function("ClaimFreeRoll").OnServerInvoke = function(player: Player)
+	local profile = PlayerDataService.get(player)
+	if not profile then return { ok = false, reason = "no_profile" } end
+	local today = utcDay()
+	local freeRoll = profile.quests.freeRoll or { lastDay = 0 }
+	if freeRoll.lastDay == today then
+		return { ok = false, reason = "already_claimed" }
+	end
+	PlayerDataService.update(player, function(p)
+		if not p.quests.freeRoll then p.quests.freeRoll = { lastDay = 0 } end
+		p.quests.freeRoll.lastDay = today
+	end)
+	-- Delegiere Roll an PackService (Pack 1, 1 Pack)
+	local PackService = script.Parent:FindFirstChild("PackService")
+	if PackService then
+		local PS = require(PackService) :: any
+		if PS and PS.openPacks then
+			local results = PS.openPacks(player, 1, 1)
+			if results then
+				Logger.info("%s claimed free daily roll → %s", player.Name, results[1] and results[1].rarityId or "?")
+				return { ok = true, results = results }
+			end
+		end
+	end
+	return { ok = false, reason = "pack_error" }
+end
+
+Net:Function("RerollQuest").OnServerInvoke = function(player: Player)
+	local profile = PlayerDataService.get(player)
+	if not profile then return { ok = false, reason = "no_profile" } end
+	local today = utcDay()
+	if (profile.quests.rerollDay or 0) >= today then
+		return { ok = false, reason = "already_used" }
+	end
+	-- Find unclaimed quests eligible for reroll
+	local rerollable: { string } = {}
+	for id, state in pairs(profile.quests.daily) do
+		if not state.claimed then table.insert(rerollable, id) end
+	end
+	if #rerollable == 0 then return { ok = false, reason = "none_available" } end
+	-- Pick the first unclaimed quest to replace
+	table.sort(rerollable)
+	local targetId = rerollable[1]
+	-- Build existing-id set (minus the one we're removing)
+	local existing: { [string]: boolean } = {}
+	for id in pairs(profile.quests.daily) do existing[id] = true end
+	existing[targetId] = nil
+	-- Try to pick a fresh quest
+	local newDef = nil
+	for _, seed in ipairs({ today * 997, today * 1337, today * 7919 }) do
+		local picks = Quests.pickDailies(rngFor(player, seed), 1)
+		if picks and picks[1] and not existing[picks[1].id] then
+			newDef = picks[1]
+			break
+		end
+	end
+	if not newDef then return { ok = false, reason = "no_new_quest" } end
+	PlayerDataService.update(player, function(p)
+		p.quests.daily[targetId] = nil
+		p.quests.daily[newDef.id] = { progress = 0, claimed = false }
+		if not p.quests.rerollDay then p.quests.rerollDay = 0 end
+		p.quests.rerollDay = today
+	end)
+	PlayerDataService.patchQuests(player)
+	Logger.info("%s rerolled quest %s → %s", player.Name, targetId, newDef.id)
+	return { ok = true, removedId = targetId, newId = newDef.id }
+end
+
 Net:Function("QuestPreview").OnServerInvoke = function(_: Player)
 	-- Liefert nur die statische Pool/Login/Minute-Definition.
 	return {

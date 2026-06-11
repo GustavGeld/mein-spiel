@@ -241,6 +241,14 @@ local function onLeave(player: Player)
 	Logger.info("Profile released for %s", player.Name)
 end
 
+-- Tutorial als abgeschlossen markieren
+Net:Function("CompleteTutorial").OnServerInvoke = function(player: Player)
+	PlayerDataService.update(player, function(profile)
+		profile.flags.tutorialDone = true
+	end)
+	return true
+end
+
 -- Sprache umschalten (Stage 4 baut volles ChangeSetting drumherum)
 Net:Function("SwitchLanguage").OnServerInvoke = function(player: Player, lang)
 	if type(lang) ~= "string" then return false end

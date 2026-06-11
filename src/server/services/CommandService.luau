@@ -70,6 +70,11 @@ end
 --   /inv delete <rarity>    → entfernt alle Götter dieser Seltenheit
 --   /inv delete all         → wie clear
 --   /inv count              → zeigt aktuelle Anzahl Götter
+--
+-- Gamepass-Befehle (Studio-only):
+--   /pass <flag>            → toggle einzelnen Pass (z.B. /pass autoRoll)
+--   /pass clear             → ALLE Pässe entfernen (für Kauf-Tests)
+--   /pass list              → zeigt aktive Pässe im Output
 local function clearTempleSlots(profile)
 	for _, slot in ipairs(profile.temple.slots) do
 		slot.godUid = nil
@@ -127,17 +132,56 @@ local function handleInv(player: Player, rest: string)
 end
 
 -- ─── Gamepass-Befehle (Studio-only via canUse) ───────────────────────────────
---   /pass <flag>            → toggle Pass an/aus
+--   /pass <flag>            → toggle einzelnen Pass an/aus
+--   /pass clear             → ALLE Pässe entfernen (für Kauf-Tests)
+--   /pass list              → zeigt aktive Pässe im Output
 local function handlePass(player: Player, rest: string)
 	local typed = rest:match("^(%S+)") or ""
 	if typed == "" then return end
-	-- Case-insensitive Lookup, weil rest schon lower-cased ankommt.
+	local Net = require(Shared.remotes.Net)
+
+	-- /pass clear → alle Pässe zurücksetzen
+	if typed == "clear" then
+		PlayerDataService.update(player, function(p)
+			p.unlocks.gamepasses = {}
+			-- extraSlots-Effekt rückgängig: Tempel auf 3 Slots trimmen
+			while #p.temple.slots > 3 do table.remove(p.temple.slots, #p.temple.slots) end
+		end)
+		PlayerDataService.patchTemple(player)
+		pcall(function()
+			local profile = PlayerDataService.get(player)
+			if profile then
+				Net:Event("OnGamepassUpdate"):FireClient(player, profile.unlocks.gamepasses)
+			end
+		end)
+		Logger.info("%s [/pass clear] all gamepasses removed", player.Name)
+		return
+	end
+
+	-- /pass list → aktive Pässe loggen
+	if typed == "list" then
+		local profile = PlayerDataService.get(player)
+		if profile then
+			local active = {}
+			for k, v in pairs(profile.unlocks.gamepasses) do
+				if v then table.insert(active, k) end
+			end
+			Logger.info("%s active passes: %s", player.Name,
+				#active > 0 and table.concat(active, ", ") or "(none)")
+		end
+		return
+	end
+
+	-- /pass <flag> → einzelnen Pass togglen
 	local Gamepasses = require(Shared.config.Gamepasses)
 	local flag: string? = nil
 	for f in pairs(Gamepasses.byFlag) do
 		if f:lower() == typed then flag = f; break end
 	end
-	if not flag then return end
+	if not flag then
+		Logger.info("%s [/pass] unknown flag '%s'", player.Name, typed)
+		return
+	end
 	local profile = PlayerDataService.get(player)
 	if not profile then return end
 	local current = profile.unlocks.gamepasses[flag] == true
@@ -155,14 +199,41 @@ local function handlePass(player: Player, rest: string)
 		end)
 		PlayerDataService.patchTemple(player)
 	end
-	local Net = require(Shared.remotes.Net)
 	pcall(function()
 		profile = PlayerDataService.get(player)
 		if profile then
 			Net:Event("OnGamepassUpdate"):FireClient(player, profile.unlocks.gamepasses)
 		end
 	end)
-	Logger.info("%s [/pass] %s -> %s", player.Name, flag, tostring(not current))
+	Logger.info("%s [/pass] %s → %s", player.Name, flag, tostring(not current))
+end
+
+-- ─── Event-Befehle ──────────────────────────────────────────────────────────
+--   /event start <id> <minutes>   → startet ein Event
+--   /event stop                   → beendet aktives Event
+--   /event list                   → zeigt verfügbare Event-IDs
+local function handleEvent(player: Player, rest: string)
+	local LimitedEvents = require(Shared.config.LimitedEvents)
+	local LimitedEventService = require(script.Parent.LimitedEventService)
+	local sub, arg1, arg2 = rest:match("^(%S+)%s*(%S*)%s*(%S*)$")
+	sub = sub and sub:lower() or ""
+
+	if sub == "list" then
+		local ids = {}
+		for id in pairs(LimitedEvents) do table.insert(ids, id) end
+		Logger.info("Available events: %s", table.concat(ids, ", "))
+	elseif sub == "start" then
+		local eventId = arg1 or ""
+		local minutes = tonumber(arg2) or 60
+		if LimitedEventService.startEvent(eventId, minutes * 60) then
+			Logger.info("%s started event '%s' for %d min", player.Name, eventId, minutes)
+		else
+			Logger.warn("Unknown event id: '%s'", eventId)
+		end
+	elseif sub == "stop" then
+		LimitedEventService.stopEvent()
+		Logger.info("%s stopped event", player.Name)
+	end
 end
 
 local function handle(player: Player, message: string)
@@ -176,6 +247,8 @@ local function handle(player: Player, message: string)
 		handleInv(player, rest)
 	elseif cmd == "pass" or cmd == "gp" then
 		handlePass(player, rest)
+	elseif cmd == "event" then
+		handleEvent(player, rest)
 	end
 end
 

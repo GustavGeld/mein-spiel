@@ -15,6 +15,7 @@ local Util = require(script.Parent.Parent.Util)
 local AutoRollController = require(script.Parent.Parent.Parent.controllers.AutoRollController)
 
 local ShopPanel = {}
+ShopPanel.frenzyDiscount = 0 -- set by UIController when frenzy active
 
 local function makePackCard(pack, profileSnapshot): Frame
 	local card = Instance.new("Frame")
@@ -136,7 +137,14 @@ local function makePackCard(pack, profileSnapshot): Frame
 		priceLabel.TextSize = 16
 		priceLabel.TextColor3 = Theme.color.gold
 		priceLabel.TextXAlignment = Enum.TextXAlignment.Right
-		priceLabel.Text = string.format("💰 %s", Odds.formatBig(pack.basePriceGold))
+		local displayPrice = pack.basePriceGold
+		if ShopPanel.frenzyDiscount > 0 then
+			displayPrice = math.floor(displayPrice * (1 - ShopPanel.frenzyDiscount))
+			priceLabel.Text = string.format("🔥 💰 %s (-%d%%)", Odds.formatBig(displayPrice), ShopPanel.frenzyDiscount * 100)
+			priceLabel.TextColor3 = Color3.fromRGB(255, 140, 50)
+		else
+			priceLabel.Text = string.format("💰 %s", Odds.formatBig(displayPrice))
+		end
 		priceLabel.Parent = rightHolder
 
 		local buttons = Instance.new("Frame")
@@ -229,6 +237,139 @@ local function makePackCard(pack, profileSnapshot): Frame
 	return card
 end
 
+local function makeEventCard(eventData: any, snapshot: any): Frame
+	local c = eventData.color or { 1, 0.7, 0 }
+	local eventColor = Color3.fromRGB(
+		math.floor((c[1] or 1) * 255),
+		math.floor((c[2] or 0.7) * 255),
+		math.floor((c[3] or 0) * 255)
+	)
+	local packInfo = eventData.pack or {}
+	local priceGold = packInfo.priceGold or 0
+	local pullCount = packInfo.pullCount or 5
+
+	local card = Instance.new("Frame")
+	card.BackgroundColor3 = Color3.fromRGB(20, 10, 32)
+	card.BorderSizePixel = 0
+	card.Size = UDim2.new(1, 0, 0, 104)
+	Util.corner(card, Theme.radius.md)
+
+	local stroke = Instance.new("UIStroke", card)
+	stroke.Color = eventColor
+	stroke.Thickness = 2
+
+	-- Animated gradient shine
+	local grad = Instance.new("UIGradient", card)
+	grad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 20, 60)), ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 10, 32)) })
+	grad.Rotation = 45
+
+	-- Event badge top-left
+	local badge = Instance.new("TextLabel")
+	badge.BackgroundColor3 = eventColor
+	badge.BorderSizePixel = 0
+	badge.Position = UDim2.fromOffset(10, 8)
+	badge.Size = UDim2.fromOffset(90, 20)
+	badge.Font = Theme.font.bold
+	badge.TextSize = 11
+	badge.TextColor3 = Color3.fromRGB(20, 20, 30)
+	badge.Text = "✨ " .. Locale.t("event.packLabel")
+	badge.Parent = card
+	Util.corner(badge, Theme.radius.sm)
+
+	-- Event name
+	local nameLbl = Instance.new("TextLabel")
+	nameLbl.BackgroundTransparency = 1
+	nameLbl.Position = UDim2.fromOffset(10, 32)
+	nameLbl.Size = UDim2.new(0.55, -20, 0, 22)
+	nameLbl.Font = Theme.font.heading
+	nameLbl.TextSize = 17
+	nameLbl.TextColor3 = eventColor
+	nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+	nameLbl.Text = Locale.t(eventData.nameKey or "event.active")
+	nameLbl.Parent = card
+
+	-- Description
+	local descLbl = Instance.new("TextLabel")
+	descLbl.BackgroundTransparency = 1
+	descLbl.Position = UDim2.fromOffset(10, 55)
+	descLbl.Size = UDim2.new(0.55, -20, 0, 18)
+	descLbl.Font = Theme.font.body
+	descLbl.TextSize = 12
+	descLbl.TextColor3 = Theme.color.textSecondary
+	descLbl.TextXAlignment = Enum.TextXAlignment.Left
+	descLbl.Text = Locale.t(eventData.descKey or "event.noEvent")
+	descLbl.Parent = card
+
+	-- Countdown label
+	local countdownLbl = Instance.new("TextLabel")
+	countdownLbl.BackgroundTransparency = 1
+	countdownLbl.Position = UDim2.fromOffset(10, 76)
+	countdownLbl.Size = UDim2.new(0.55, -20, 0, 16)
+	countdownLbl.Font = Theme.font.body
+	countdownLbl.TextSize = 12
+	countdownLbl.TextColor3 = Theme.color.textMuted
+	countdownLbl.TextXAlignment = Enum.TextXAlignment.Left
+	countdownLbl.Parent = card
+	local endsAt = eventData.endsAt or 0
+	task.spawn(function()
+		while countdownLbl.Parent do
+			local secs = math.max(0, endsAt - os.time())
+			local h = math.floor(secs / 3600)
+			local m = math.floor((secs % 3600) / 60)
+			local s = secs % 60
+			countdownLbl.Text = string.format(Locale.t("event.endsIn"), string.format("%d:%02d:%02d", h, m, s))
+			task.wait(1)
+		end
+	end)
+
+	-- Right side: price + buy button
+	local currencies = snapshot.currencies or {}
+	local gold = currencies.gold or 0
+	local canAfford = gold >= priceGold
+
+	local priceLbl = Instance.new("TextLabel")
+	priceLbl.BackgroundTransparency = 1
+	priceLbl.AnchorPoint = Vector2.new(1, 0)
+	priceLbl.Position = UDim2.new(1, -16, 0, 22)
+	priceLbl.Size = UDim2.fromOffset(200, 26)
+	priceLbl.Font = Theme.font.bold
+	priceLbl.TextSize = 16
+	priceLbl.TextColor3 = canAfford and Theme.color.textPrimary or Theme.color.danger
+	priceLbl.TextXAlignment = Enum.TextXAlignment.Right
+	priceLbl.Text = string.format("🪙 %s  (%dx pulls)", Odds.formatBig(priceGold), pullCount)
+	priceLbl.Parent = card
+
+	local buyBtn = Instance.new("TextButton")
+	buyBtn.AnchorPoint = Vector2.new(1, 1)
+	buyBtn.Position = UDim2.new(1, -16, 1, -12)
+	buyBtn.Size = UDim2.fromOffset(160, 36)
+	buyBtn.BackgroundColor3 = canAfford and eventColor or Theme.color.panelLight
+	buyBtn.BorderSizePixel = 0
+	buyBtn.AutoButtonColor = false
+	buyBtn.Font = Theme.font.bold
+	buyBtn.TextSize = 14
+	buyBtn.TextColor3 = canAfford and Color3.fromRGB(20, 20, 30) or Theme.color.textMuted
+	buyBtn.Text = Locale.t("event.buy")
+	buyBtn.Parent = card
+	Util.corner(buyBtn, Theme.radius.sm)
+
+	buyBtn.Activated:Connect(function()
+		buyBtn.Active = false
+		buyBtn.Text = "…"
+		local ok, res = pcall(function()
+			return Net:Function("BuyEventPack"):InvokeServer()
+		end)
+		if ok and res and res.ok then
+			buyBtn.Text = "✓"
+		else
+			buyBtn.Text = Locale.t("event.buy")
+			buyBtn.Active = true
+		end
+	end)
+
+	return card
+end
+
 function ShopPanel.create(body: Instance, snapshot)
 	local scroller = Instance.new("ScrollingFrame")
 	scroller.BackgroundTransparency = 1
@@ -239,6 +380,12 @@ function ShopPanel.create(body: Instance, snapshot)
 	scroller.ScrollBarThickness = 4
 	scroller.Parent = body
 	Util.listLayout(scroller, Enum.FillDirection.Vertical, 8)
+
+	-- Event pack card at the top when an event is active
+	if snapshot.activeEvent then
+		local eventCard = makeEventCard(snapshot.activeEvent, snapshot)
+		eventCard.Parent = scroller
+	end
 
 	for _, pack in ipairs(Packs.list) do
 		local card = makePackCard(pack, snapshot)

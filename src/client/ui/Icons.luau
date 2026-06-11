@@ -25,6 +25,7 @@ local Icons = {
 	gamepasses = icon("rbxassetid://0", "💎"),
 	settings  = icon("rbxassetid://93700586176429", "⚙"),
 
+	temple      = icon("rbxassetid://0", "🏛"),
 	leaderboard = icon("rbxassetid://0", "🏆"),
 	season      = icon("rbxassetid://0", "🌀"),
 	auctions    = icon("rbxassetid://0", "🔨"),

@@ -26,7 +26,8 @@ end
 -- Diese Top-Level-Felder werden beim Rebirth zurückgesetzt (Default-Werte aus DefaultProfile).
 -- Alles andere bleibt — insbesondere divinity, gems, cosmetics, gamepasses, collection.
 Rebirth.RESET = {
-	currencies = function(c) c.gold = 0; c.faith = 0; c.offerings = 0 end,
+	-- Spieler startet nach Rebirth mit 500 Gold, damit er sofort ein Pack kaufen kann.
+	currencies = function(c) c.gold = 500; c.faith = 0; c.offerings = 0 end,
 	inventory  = function(i) i.gods = {} end,
 	temple     = function(t)
 		t.tier = 1

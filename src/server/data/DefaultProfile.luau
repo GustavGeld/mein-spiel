@@ -19,6 +19,7 @@ export type Profile = {
 		gods: { GodEntry },
 		potions: { [string]: number },
 		cosmetics: { [string]: boolean },
+		eternalGods: { GodEntry },
 	},
 	unlocks:    {
 		packs: { [string]: boolean },
@@ -28,10 +29,12 @@ export type Profile = {
 		tier: number,
 		slots: { { godUid: string? } },
 		upgrades: { production: number, slots: number, faith: number },
+		pending: { [string]: { gold: number, faith: number, offerings: number } },
 	},
 	divinity:   {
 		spent: number,
 		tree: { [string]: { [string]: number } },
+		echoStacks: number,
 	},
 	quests:     {
 		daily: { [string]: any },
@@ -54,7 +57,8 @@ export type Profile = {
 		codesRedeemed: { [string]: boolean },
 	},
 	season:       { id: string, score: number, claimed: boolean },
-	collection:   { discovered: { [string]: boolean } },
+	collection:   { discovered: { [string]: boolean }, claimedRows: { [string]: boolean }, bestAuraTier: number },
+	companion:    { skin: string, ability: string, ownedSkins: { [string]: boolean }, abilities: { [string]: boolean } },
 	achievements: { claimed: { [string]: boolean } },
 	flags:        { tutorialDone: boolean, firstSecret: boolean },
 	pity:         { [string]: number }, -- per packId stored as string
@@ -66,7 +70,7 @@ local function default(): Profile
 		version = 1,
 		currencies = { gold = 100, faith = 0, offerings = 0, gems = 0, divinity = 0 },
 		lifetime   = { gold = 0, pulls = 0, rebirths = 0, rarestRarity = 0 },
-		inventory  = { gods = {}, potions = {}, cosmetics = {} },
+		inventory  = { gods = {}, potions = {}, cosmetics = {}, eternalGods = {} },
 		unlocks    = {
 			packs = { ["1"] = true },
 			gamepasses = {},
@@ -75,18 +79,22 @@ local function default(): Profile
 			tier = 1,
 			slots = { { godUid = nil }, { godUid = nil }, { godUid = nil } },
 			upgrades = { production = 0, slots = 0, faith = 0 },
+			pending = {} :: { [string]: { gold: number, faith: number } },
 		},
 		divinity   = {
 			spent = 0,
 			tree = {
 				fortune = {}, wealth = {}, devotion = {}, ascension = {}, mythos = {},
 			},
+			echoStacks = 0,
 		},
 		quests     = {
 			daily = {}, weekly = {},
 			dayStamp = 0, weekStamp = 0,
 			minute = { lastClaim = 0 },
 			login = { streak = 0, lastDay = 0, claimed = false },
+			freeRoll = { lastDay = 0 },
+			rerollDay = 0,
 		},
 		settings   = {
 			language = "en",
@@ -95,10 +103,12 @@ local function default(): Profile
 			reducedMotion = false,
 			music = true,
 			sfx = true,
+			companionEnabled = true,
 		},
 		social     = { friendsBoost = true, referrer = nil, codesRedeemed = {} },
 		season       = { id = "S1", score = 0, claimed = false },
-		collection   = { discovered = {} },
+		collection   = { discovered = {}, claimedRows = {}, bestAuraTier = 0, activeAuraTier = 0 },
+		companion    = { skin = "default", ability = "none", ownedSkins = {}, abilities = {} },
 		achievements = { claimed = {} },
 		flags        = { tutorialDone = false, firstSecret = false },
 		pity       = {},

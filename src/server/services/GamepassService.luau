@@ -140,11 +140,30 @@ Net:Function("PromptGamepass").OnServerInvoke = function(player: Player, passId)
 		return { ok = false, reason = "not_configured" }
 	end
 	local profile = PlayerDataService.get(player)
+	-- Bereits im Profil vorhanden? → nichts tun.
 	if profile and profile.unlocks.gamepasses[pass.flag] then
 		return { ok = true, already = true }
 	end
-	-- Live-Check gegen MarketplaceService: Place-Creator besitzen ihre eigenen
-	-- Gamepasses automatisch — wir granten dann direkt und prompten gar nicht.
+
+	-- ─── Studio-Modus: Kauf simulieren ────────────────────────────────────────
+	-- Der Place-Creator besitzt alle eigenen Passes via MarketplaceService → ownsGamepass
+	-- gibt immer true zurück → würde sofort re-granten auch nach /pass clear.
+	-- Stattdessen: direkter Grant + OnGamepassUpdate damit der Client sicher "Owned" sieht.
+	if RunService:IsStudio() then
+		task.wait(0.5) -- kurze Pause für visuelle Kaufsimulation
+		grantFlag(player, pass.flag)
+		-- Nochmals explizit feuern damit Client sicher das Event bekommt
+		local updProfile = PlayerDataService.get(player)
+		if updProfile then
+			gamepassEvent:FireClient(player, updProfile.unlocks.gamepasses)
+		end
+		Logger.info("[Studio] Simulated purchase of %s for %s", pass.flag, player.Name)
+		return { ok = true, purchased = true }
+	end
+
+	-- ─── Live-Modus ───────────────────────────────────────────────────────────
+	-- Creator-Check: falls der Spieler den Pass bereits via Roblox besitzt,
+	-- direkt granten statt den "bereits besessen"-Dialog zu zeigen.
 	if ownsGamepass(player.UserId, pass.robloxId) then
 		grantFlag(player, pass.flag)
 		return { ok = true, already = true }

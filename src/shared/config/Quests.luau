@@ -74,15 +74,38 @@ for _, def in ipairs(Quests.weeklyPool) do
 	Quests.byId[def.id] = def
 end
 
--- Login-Streak Belohnungen (Tag 1..7+, dann Loop).
+-- Login-Streak Belohnungen (Tag 1..30, dann Loop).
 Quests.loginRewards = {
-	{ currency = "gold", amount = 500 },
-	{ currency = "gold", amount = 1000 },
-	{ currency = "gold", amount = 2000 },
-	{ currency = "gems", amount = 5 },
-	{ currency = "gold", amount = 5000 },
-	{ currency = "gold", amount = 10000 },
-	{ currency = "gems", amount = 15 },
+	{ currency = "gold",  amount = 500 },
+	{ currency = "gold",  amount = 1000 },
+	{ currency = "gold",  amount = 2000 },
+	{ currency = "gems",  amount = 5 },
+	{ currency = "gold",  amount = 5000 },
+	{ currency = "gold",  amount = 10000 },
+	{ currency = "gems",  amount = 15 },
+	{ currency = "gold",  amount = 15000 },
+	{ currency = "gold",  amount = 20000 },
+	{ currency = "gems",  amount = 25 },
+	{ currency = "gold",  amount = 30000 },
+	{ currency = "faith", amount = 200 },
+	{ currency = "gold",  amount = 50000 },
+	{ currency = "gems",  amount = 40 },
+	{ currency = "gold",  amount = 75000 },
+	{ currency = "faith", amount = 500 },
+	{ currency = "gold",  amount = 100000 },
+	{ currency = "gold",  amount = 150000 },
+	{ currency = "gems",  amount = 60 },
+	{ currency = "faith", amount = 1000 },
+	{ currency = "gold",  amount = 200000 },
+	{ currency = "gold",  amount = 300000 },
+	{ currency = "gems",  amount = 100 },
+	{ currency = "faith", amount = 2000 },
+	{ currency = "gold",  amount = 500000 },
+	{ currency = "gold",  amount = 750000 },
+	{ currency = "gems",  amount = 150 },
+	{ currency = "faith", amount = 3000 },
+	{ currency = "gold",  amount = 1000000 },
+	{ currency = "gems",  amount = 250 },
 } :: { Reward }
 
 -- Minute-Reward (alle 60s)

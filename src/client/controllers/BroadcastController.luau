@@ -46,8 +46,20 @@ local function bannerText(payload): string
 		return string.format("🏆  %s pulled %s!", payload.player or "?", payload.godId or "?")
 	elseif payload.type == "text" then
 		return tostring(payload.text)
+	elseif payload.type == "system" then
+		return tostring(payload.message or "")
 	end
 	return ""
+end
+
+local function shouldSkipBroadcast(payload): boolean
+	if payload.type == "system" then
+		local msg = payload.message or ""
+		if string.find(msg, "STORM") or string.find(msg, "FRENZY") or string.find(msg, "RAUSCH") or string.find(msg, "STURM") then
+			return true
+		end
+	end
+	return false
 end
 
 local function reposition()
@@ -116,6 +128,7 @@ end
 function BroadcastController.start()
 	Net:Event("OnBroadcast").OnClientEvent:Connect(function(payload)
 		if not payload then return end
+		if shouldSkipBroadcast(payload) then return end
 		show(payload)
 	end)
 end

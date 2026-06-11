@@ -135,15 +135,37 @@ local function makeGamepassCard(pass, ownedFlags): Frame
 
 		buyBtn.Activated:Connect(function()
 			buyBtn.Text = "…"
+			buyBtn.AutoButtonColor = false
 			local result = Net:Function("PromptGamepass"):InvokeServer(pass.flag)
-			task.delay(1.0, function()
+			if not result then
 				if buyBtn and buyBtn.Parent then
 					buyBtn.Text = Locale.t("gamepass.buy")
+					buyBtn.AutoButtonColor = true
 				end
-			end)
-			if result and not result.ok and result.reason == "not_configured" then
+				return
+			end
+			if result.reason == "not_configured" then
 				if buyBtn and buyBtn.Parent then
 					buyBtn.Text = Locale.t("gamepass.unavailable")
+					buyBtn.AutoButtonColor = true
+				end
+				return
+			end
+			if not result.ok then
+				if buyBtn and buyBtn.Parent then
+					buyBtn.Text = Locale.t("gamepass.buy")
+					buyBtn.AutoButtonColor = true
+				end
+				return
+			end
+			-- Kauf erfolgreich: Snapshot direkt patchen + Panel forciert rebuilden.
+			local ok2, UIController = pcall(require, script:FindFirstAncestor("Client").controllers.UIController)
+			if ok2 and UIController and UIController.snapshot then
+				UIController.snapshot.unlocks = UIController.snapshot.unlocks or { packs = {}, gamepasses = {} }
+				UIController.snapshot.unlocks.gamepasses = UIController.snapshot.unlocks.gamepasses or {}
+				UIController.snapshot.unlocks.gamepasses[pass.flag] = true
+				if UIController.forceRebuild then
+					UIController.forceRebuild()
 				end
 			end
 		end)
